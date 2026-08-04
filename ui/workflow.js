@@ -36,14 +36,46 @@ async function toggleProblemPageF(pageIndex, button) {
   }
 }
 
-function scheduleSavePosition(pageIndex) {
-  if (!state.activeFileId) return;
+function getCurrentPageIndex() {
+  const rows = [...elements.pagesId.querySelectorAll(".page-row")];
+  if (!rows.length) return 0;
+
+  const containerTop = elements.pageScrollId.getBoundingClientRect().top + 12;
+  let nearestIndex = Number(rows[0].dataset.pageIndex);
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  for (const row of rows) {
+    const rect = row.getBoundingClientRect();
+    const pageIndex = Number(row.dataset.pageIndex);
+
+    if (rect.top <= containerTop && rect.bottom > containerTop) {
+      return pageIndex;
+    }
+
+    const distance = Math.abs(rect.top - containerTop);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestIndex = pageIndex;
+    }
+  }
+
+  return nearestIndex;
+}
+
+function scheduleSaveCurrentPage() {
+  if (!state.activeFileId || !state.document) return;
   window.clearTimeout(state.savePositionTimer);
   const fileId = state.activeFileId;
+
   state.savePositionTimer = window.setTimeout(async () => {
-    try { await callBackend("setLastPageB", fileId, pageIndex); }
-    catch (error) { showToast(error.message, true); }
-  }, 700);
+    if (fileId !== state.activeFileId) return;
+    const pageIndex = getCurrentPageIndex();
+    try {
+      await callBackend("setLastPageB", fileId, pageIndex);
+    } catch (error) {
+      showToast(error.message, true);
+    }
+  }, 450);
 }
 
 function scheduleSaveNote() {
@@ -65,17 +97,12 @@ async function saveUiOptions(patch) {
 
 function releasePageResources() {
   if (state.observer) state.observer.disconnect();
+  window.clearTimeout(state.savePositionTimer);
   for (const url of state.objectUrls.values()) URL.revokeObjectURL(url);
   state.objectUrls.clear();
   state.pageData.clear();
   state.pendingRequests.clear();
   state.visiblePages.clear();
-}
-
-function resetViewportScroll() {
-  document.documentElement.scrollTop = 0;
-  document.body.scrollTop = 0;
-  window.scrollTo(0, 0);
 }
 
 function scrollPageRowInsideContainer(row, behavior = "auto") {
@@ -90,11 +117,17 @@ function scrollPageRowInsideContainer(row, behavior = "auto") {
   );
 
   container.scrollTo({ top: targetTop, behavior });
-  resetViewportScroll();
 }
 
 function scrollToSavedPage(pageIndex) {
-  const row = elements.pagesId.querySelector(`[data-page-index="${pageIndex}"]`);
+  if (!state.document?.pages?.length) {
+    elements.pageScrollId.scrollTop = 0;
+    return;
+  }
+
+  const maximumIndex = state.document.pages.length - 1;
+  const safeIndex = Math.max(0, Math.min(maximumIndex, Number(pageIndex) || 0));
+  const row = elements.pagesId.querySelector(`[data-page-index="${safeIndex}"]`);
   scrollPageRowInsideContainer(row);
 }
 
@@ -114,11 +147,11 @@ async function moveDocument(direction, unreviewedOnly = false) {
 function movePage(direction) {
   const rows = [...elements.pagesId.querySelectorAll(".page-row")];
   if (!rows.length) return;
-  const scrollTop = elements.pageScrollId.scrollTop;
-  let index = rows.findIndex((row) => row.offsetTop >= scrollTop + 10);
-  if (index < 0) index = rows.length - 1;
-  index = Math.max(0, Math.min(rows.length - 1, index + direction));
-  scrollPageRowInsideContainer(rows[index]);
+
+  const currentIndex = getCurrentPageIndex();
+  const targetIndex = Math.max(0, Math.min(rows.length - 1, currentIndex + direction));
+  const targetRow = elements.pagesId.querySelector(`[data-page-index="${targetIndex}"]`);
+  scrollPageRowInsideContainer(targetRow, "smooth");
 }
 
 function handleKeyboard(event) {
@@ -171,6 +204,7 @@ function attachEvents() {
     saveUiOptions({ status_filter: elements.statusFilterId.value });
   });
   elements.fileNoteId.addEventListener("input", scheduleSaveNote);
+  elements.pageScrollId.addEventListener("scroll", scheduleSaveCurrentPage, { passive: true });
   document.querySelectorAll(".status-button").forEach((button) => {
     button.addEventListener("click", () => setFileStatusF(button.dataset.status));
   });
@@ -180,7 +214,6 @@ function attachEvents() {
 document.addEventListener("DOMContentLoaded", () => {
   bindElements();
   attachEvents();
-  resetViewportScroll();
   if (typeof webui === "undefined") {
     showToast("Soubor webui.js nebyl načten.", true);
     return;
