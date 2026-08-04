@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF OCR Reviewer</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="index.css">
+  <script src="webui.js"></script>
+  <script src="state.js" defer></script>
+  <script src="files.js" defer></script>
+  <script src="document.js" defer></script>
+  <script src="pages.js" defer></script>
+  <script src="workflow.js" defer></script>
+</head>
+<body>
+  <header class="toolbar">
+    <button id="selectFolderId" type="button">Otevřít složku</button>
+    <input id="folderPathId" type="text" spellcheck="false" placeholder="Cesta ke složce s PDF">
+    <button id="openPathId" type="button" class="secondary">Načíst cestu</button>
+    <button id="refreshFolderId" type="button" class="secondary" title="Znovu načíst seznam PDF">Obnovit</button>
+    <button id="exportCsvId" type="button" class="secondary">Export CSV</button>
+    <span id="saveStateId" class="save-state">Manifest neotevřen</span>
+
+    <label class="toolbar-field">
+      <span>OCR</span>
+      <select id="ocrModeId">
+        <option value="layout">Rozložení</option>
+        <option value="pdf_order">Pořadí v PDF</option>
+        <option value="geometric_order">Geometrické pořadí</option>
+      </select>
+    </label>
+
+    <label class="switch-field">
+      <span>Overlay</span>
+      <span class="switch">
+        <input id="overlayId" type="checkbox">
+        <span class="switch-track"></span>
+      </span>
+    </label>
+
+    <label class="zoom-field">
+      <span>Zoom</span>
+      <input id="zoomId" type="range" min="50" max="200" step="10" value="100">
+      <output id="zoomValueId">100 %</output>
+    </label>
+  </header>
+
+  <main class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-tools">
+        <input id="nameFilterId" type="search" placeholder="Filtrovat názvy">
+        <select id="statusFilterId">
+          <option value="all">Všechny stavy</option>
+          <option value="unreviewed">Nezkontrolováno</option>
+          <option value="ok">V pořádku</option>
+          <option value="error">Chyba OCR</option>
+          <option value="needs_review">Další kontrola</option>
+        </select>
+      </div>
+      <div id="fileSummaryId" class="file-summary">Žádná složka není otevřena.</div>
+      <div id="fileListId" class="file-list" role="listbox" aria-label="PDF soubory"></div>
+    </aside>
+
+    <section class="workspace">
+      <div class="document-toolbar">
+        <div>
+          <strong id="documentNameId">Vyberte PDF</strong>
+          <span id="documentMetaId"></span>
+        </div>
+        <div class="status-buttons" aria-label="Stav kontroly">
+          <button type="button" data-status="unreviewed" class="status-button">0 Nezkontrolováno</button>
+          <button type="button" data-status="ok" class="status-button status-ok">1 V pořádku</button>
+          <button type="button" data-status="error" class="status-button status-error">2 Chyba</button>
+          <button type="button" data-status="needs_review" class="status-button status-review">3 Zkontrolovat</button>
+        </div>
+      </div>
+
+      <div class="column-headings" aria-hidden="true">
+        <span>Sken</span>
+        <span>OCR vrstva</span>
+      </div>
+
+      <div id="pageScrollId" class="page-scroll">
+        <div id="emptyStateId" class="empty-state">
+          Otevřete složku s PDF a vyberte soubor vlevo.
+        </div>
+        <div id="pagesId" class="pages"></div>
+      </div>
+
+      <div class="note-panel">
+        <label for="fileNoteId">Poznámka k souboru</label>
+        <textarea id="fileNoteId" rows="2" placeholder="Poznámka se uloží do manifestu."></textarea>
+      </div>
+    </section>
+  </main>
+
+  <div id="toastId" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
