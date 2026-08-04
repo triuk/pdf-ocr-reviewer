@@ -2,6 +2,8 @@ async function openDocumentF(fileId) {
   try {
     state.generation += 1;
     releasePageResources();
+    elements.pageScrollId.scrollTop = 0;
+
     const documentData = await callBackend("openDocumentB", fileId);
     state.activeFileId = fileId;
     state.document = documentData;
@@ -12,7 +14,10 @@ async function openDocumentF(fileId) {
     renderDocumentShell();
     setActiveStatus(documentData.status);
     elements.fileNoteId.value = documentData.note || "";
-    requestAnimationFrame(() => scrollToSavedPage(documentData.last_page || 0));
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToSavedPage(documentData.last_page || 0));
+    });
   } catch (error) {
     showToast(error.message, true);
   }
@@ -27,10 +32,12 @@ function clearDocument() {
   elements.pagesId.replaceChildren();
   elements.emptyStateId.hidden = false;
   elements.fileNoteId.value = "";
+  elements.pageScrollId.scrollTop = 0;
 }
 
 function renderDocumentShell() {
   const doc = state.document;
+  elements.pageScrollId.scrollTop = 0;
   elements.documentNameId.textContent = doc.name;
   elements.documentMetaId.textContent = `${doc.page_count} stran`;
   elements.emptyStateId.hidden = true;
@@ -75,19 +82,24 @@ function createPagePane(className, page) {
 
 function setupObserver() {
   if (state.observer) state.observer.disconnect();
+  state.visiblePages.clear();
+
   state.observer = new IntersectionObserver((entries) => {
     for (const entry of entries) {
       const pageIndex = Number(entry.target.dataset.pageIndex);
       if (entry.isIntersecting) {
         state.visiblePages.add(pageIndex);
         requestPage(pageIndex);
-        scheduleSavePosition(pageIndex);
       } else {
         state.visiblePages.delete(pageIndex);
       }
     }
     pruneLoadedPages();
-  }, { root: elements.pageScrollId, rootMargin: "120% 0px 120% 0px", threshold: 0.01 });
-  document.querySelectorAll(".page-row").forEach((row) => state.observer.observe(row));
-}
+  }, {
+    root: elements.pageScrollId,
+    rootMargin: "75% 0px 75% 0px",
+    threshold: 0.01,
+  });
 
+  elements.pagesId.querySelectorAll(".page-row").forEach((row) => state.observer.observe(row));
+}
