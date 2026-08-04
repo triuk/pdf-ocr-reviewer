@@ -72,9 +72,30 @@ function releasePageResources() {
   state.visiblePages.clear();
 }
 
+function resetViewportScroll() {
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  window.scrollTo(0, 0);
+}
+
+function scrollPageRowInsideContainer(row, behavior = "auto") {
+  if (!row) return;
+
+  const container = elements.pageScrollId;
+  const containerRect = container.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  const targetTop = Math.max(
+    0,
+    container.scrollTop + rowRect.top - containerRect.top - 8,
+  );
+
+  container.scrollTo({ top: targetTop, behavior });
+  resetViewportScroll();
+}
+
 function scrollToSavedPage(pageIndex) {
   const row = elements.pagesId.querySelector(`[data-page-index="${pageIndex}"]`);
-  row?.scrollIntoView({ block: "start" });
+  scrollPageRowInsideContainer(row);
 }
 
 async function moveDocument(direction, unreviewedOnly = false) {
@@ -97,7 +118,7 @@ function movePage(direction) {
   let index = rows.findIndex((row) => row.offsetTop >= scrollTop + 10);
   if (index < 0) index = rows.length - 1;
   index = Math.max(0, Math.min(rows.length - 1, index + direction));
-  rows[index].scrollIntoView({ block: "start" });
+  scrollPageRowInsideContainer(rows[index]);
 }
 
 function handleKeyboard(event) {
@@ -159,6 +180,7 @@ function attachEvents() {
 document.addEventListener("DOMContentLoaded", () => {
   bindElements();
   attachEvents();
+  resetViewportScroll();
   if (typeof webui === "undefined") {
     showToast("Soubor webui.js nebyl načten.", true);
     return;
