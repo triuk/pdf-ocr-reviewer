@@ -1,0 +1,103 @@
+name: Build binaries
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            requirements-build.txt
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+      - name: Run tests
+        run: pytest -q
+      - name: Run source self-test
+        run: python main.py --self-test
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact_name: pdf-ocr-reviewer-linux-x86_64
+            executable: dist/pdf-ocr-reviewer
+            asset_name: pdf-ocr-reviewer-linux-x86_64
+          - os: windows-2025
+            artifact_name: pdf-ocr-reviewer-windows-x86_64
+            executable: dist/pdf-ocr-reviewer.exe
+            asset_name: pdf-ocr-reviewer-windows-x86_64.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-build.txt
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-build.txt
+      - name: Build one-file executable
+        run: pyinstaller --noconfirm --clean pdf-ocr-reviewer.spec
+      - name: Run packaged self-test
+        run: ${{ matrix.executable }} --self-test
+      - name: Rename release asset
+        shell: python
+        run: |
+          from pathlib import Path
+          source = Path(r"${{ matrix.executable }}")
+          destination = Path("dist") / "${{ matrix.asset_name }}"
+          if destination.exists():
+              destination.unlink()
+          source.rename(destination)
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.asset_name }}
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: pdf-ocr-reviewer-*
+          path: release-dist
+          merge-multiple: true
+      - name: Create SHA-256 checksums
+        working-directory: release-dist
+        run: sha256sum pdf-ocr-reviewer-* > SHA256SUMS.txt
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" release-dist/* --generate-notes --verify-tag
