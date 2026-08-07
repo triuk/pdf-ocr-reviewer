@@ -31,6 +31,8 @@ chmod +x pdf-ocr-reviewer-linux-x86_64
 ./pdf-ocr-reviewer-linux-x86_64
 ```
 
+Linuxový one-file build před spuštěním systémového prohlížeče dočasně obnoví původní `LD_LIBRARY_PATH` uložený PyInstallerem v `LD_LIBRARY_PATH_ORIG`. Tím systémový Firefox/Chromium nenačítá nekompatibilní sdílené knihovny z dočasného adresáře one-file balíčku. Po spuštění prohlížeče aplikace obnoví vlastní PyInstaller prostředí.
+
 Při vytvoření tagu `v*`, například `v0.1.0`, stejný workflow po úspěšném testu a buildu automaticky vytvoří GitHub Release. Release obsahuje obě one-file binárky a `SHA256SUMS.txt`.
 
 Každá sestavená binárka před publikováním projde vlastním:
@@ -39,7 +41,7 @@ Každá sestavená binárka před publikováním projde vlastním:
 pdf-ocr-reviewer --self-test
 ```
 
-Self-test ověřuje import PyMuPDF a WebUI, přítomnost zabalených UI souborů a skutečné vytvoření, otevření a vykreslení testovacího PDF.
+Self-test ověřuje import PyMuPDF a WebUI, Tk/Tcl runtime, přítomnost zabalených UI souborů a skutečné vytvoření, otevření a vykreslení testovacího PDF.
 
 ## Spuštění ze zdrojového kódu
 
