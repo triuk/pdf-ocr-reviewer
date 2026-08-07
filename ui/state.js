@@ -6,8 +6,8 @@ const state = {
   ui: {
     last_file: null,
     zoom_percent: 100,
-    ocr_mode: "layout",
-    overlay: false,
+    ocr_mode: "pdf_order",
+    overlay: true,
     status_filter: "all",
     name_filter: "",
     auto_advance: true,
