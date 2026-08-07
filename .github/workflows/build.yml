@@ -83,7 +83,7 @@ jobs:
           retention-days: 30
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'Release v'))
     needs: build
     runs-on: ubuntu-22.04
     permissions:
@@ -97,7 +97,33 @@ jobs:
       - name: Create SHA-256 checksums
         working-directory: release-dist
         run: sha256sum pdf-ocr-reviewer-* > SHA256SUMS.txt
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            tag="${GITHUB_REF_NAME}"
+            verify_tag=true
+          else
+            tag="$(printf '%s\n' "${COMMIT_MESSAGE}" | sed -n '1s/^Release \(v[0-9][0-9A-Za-z.-]*\).*$/\1/p')"
+            verify_tag=false
+          fi
+          if [[ -z "${tag}" ]]; then
+            echo "Could not resolve release tag." >&2
+            exit 1
+          fi
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "verify_tag=${verify_tag}" >> "${GITHUB_OUTPUT}"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" release-dist/* --generate-notes --verify-tag
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          VERIFY_TAG: ${{ steps.release.outputs.verify_tag }}
+        run: |
+          if [[ "${VERIFY_TAG}" == "true" ]]; then
+            gh release create "${RELEASE_TAG}" release-dist/* --generate-notes --verify-tag
+          else
+            gh release create "${RELEASE_TAG}" release-dist/* --generate-notes --target "${GITHUB_SHA}"
+          fi
