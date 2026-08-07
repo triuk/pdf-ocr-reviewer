@@ -52,6 +52,15 @@ def run_self_test() -> int:
     except Exception:
         checks.append(("WebUI import", False))
 
+    try:
+        import tkinter
+
+        tcl = tkinter.Tcl()
+        tk_runtime_ok = bool(tcl.eval("info patchlevel"))
+        checks.append(("Tk/Tcl runtime", tk_runtime_ok))
+    except Exception:
+        checks.append(("Tk/Tcl runtime", False))
+
     ui_folder = get_ui_folder()
     required_ui_files = (
         "index.html",
