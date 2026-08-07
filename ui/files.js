@@ -29,7 +29,7 @@ function renderFileList() {
     meta.className = "file-item-meta";
     const parts = [];
     if (file.problem_page_count) parts.push(`!${file.problem_page_count}`);
-    if (file.changed_since_review) parts.push("změněn");
+    if (file.changed_since_review) parts.push("changed");
     meta.textContent = parts.join(" ");
     if (file.changed_since_review) meta.classList.add("file-changed");
 
@@ -41,8 +41,8 @@ function renderFileList() {
   const counts = Object.fromEntries(["unreviewed", "ok", "error", "needs_review"].map((key) => [key, 0]));
   for (const file of state.files) counts[file.status] = (counts[file.status] || 0) + 1;
   elements.fileSummaryId.textContent = state.folder
-    ? `${state.files.length} PDF · ${counts.unreviewed} nezkontrolováno · ${counts.error} chyb`
-    : "Žádná složka není otevřena.";
+    ? `${state.files.length} PDF · ${counts.unreviewed} unreviewed · ${counts.error} errors`
+    : "No folder is open.";
 }
 
 function statusSymbol(status) {
@@ -69,7 +69,7 @@ async function exportCsvF() {
         const writable = await handle.createWritable();
         await writable.write(csvText);
         await writable.close();
-        showToast("CSV bylo uloženo.");
+        showToast("CSV was saved.");
         return;
       } catch (error) {
         if (error?.name === "AbortError") return;
@@ -129,4 +129,3 @@ async function openInitialDocumentAfterFolder() {
     clearDocument();
   }
 }
-

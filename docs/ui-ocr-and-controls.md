@@ -1,39 +1,39 @@
-# OCR režimy a klávesové ovládání
+# OCR modes and keyboard controls
 
-### 4.4 OCR režimy
+### 4.4 OCR modes
 
-První verze bude mít tři režimy pravého panelu:
+The first version has three modes for the right panel:
 
 1. **Layout**
-   - OCR slova nebo znaky rozmístěné podle souřadnic v PDF;
-   - bílý podklad;
-   - volitelně obdélníky objektů.
+   - OCR words or characters positioned according to coordinates in the PDF;
+   - white background;
+   - optional object rectangles.
 
 2. **PDF order**
-   - text v pořadí, v jakém je získán z PDF bez geometrického řazení;
-   - viditelné oddělení bloků a řádků.
+   - text in the order in which it is extracted from the PDF without geometric sorting;
+   - visible separation of blocks and lines.
 
 3. **Geometric order**
-   - text získaný se zapnutým geometrickým řazením;
-   - slouží k přímému porovnání s pořadím objektů uloženým v PDF.
+   - text extracted with geometric sorting enabled;
+   - intended for direct comparison with the object order stored in the PDF.
 
-Přepínač **Overlay** zobrazí poloprůhledné OCR objekty nebo jejich obdélníky přímo nad skenem.
+The **Overlay** switch displays semi-transparent OCR objects or their rectangles directly over the scan.
 
-### 4.5 Klávesové ovládání
+### 4.5 Keyboard controls
 
-| Klávesa | Akce |
+| Key | Action |
 |---|---|
-| `↑` / `↓` | předchozí nebo další PDF |
-| `Page Up` / `Page Down` | předchozí nebo další stránka |
-| `1` | označit soubor jako `ok` |
-| `2` | označit soubor jako `error` |
-| `3` | označit soubor jako `needs_review` |
-| `0` | vrátit stav na `unreviewed` |
-| `Space` | zapnout nebo vypnout overlay |
-| `F` | přizpůsobit šířce |
-| `Ctrl+G` | přejít na zadanou stránku |
-| `N` | otevřít nebo zaměřit poznámku |
+| `↑` / `↓` | previous or next PDF |
+| `Page Up` / `Page Down` | previous or next page |
+| `1` | mark file as `ok` |
+| `2` | mark file as `error` |
+| `3` | mark file as `needs_review` |
+| `0` | return status to `unreviewed` |
+| `Space` | turn overlay on or off |
+| `F` | fit to width |
+| `Ctrl+G` | go to a specified page |
+| `N` | open or focus the note |
 
-Po označení souboru lze v nastavení zapnout automatický přechod na další nezkontrolovaný soubor.
+After marking a file, automatic advancement to the next unreviewed file can be enabled in the settings.
 
 ---

@@ -1,49 +1,49 @@
 # pdf-ocr-reviewer
 
-Lokální desktopová aplikace pro rychlou vizuální kontrolu OCR vrstev ve větším množství PDF. Rozhraní běží přes WebUI, backend je v Pythonu a PDF zpracovává PyMuPDF.
+A local desktop application for fast visual review of OCR layers across a larger number of PDF files. The interface runs through WebUI, the backend is written in Python, and PDFs are processed with PyMuPDF.
 
-## Aktuální stav
+## Current status
 
-Je implementován funkční prototyp:
+A functional prototype is implemented:
 
-- načtení složky a seznamu PDF;
-- otevření dokumentu a průběžné načítání viditelných stran;
-- společné zobrazení skenu a OCR vrstvy;
-- režimy OCR rozložení, pořadí v PDF a geometrické pořadí;
+- loading a folder and its PDF list;
+- opening a document and progressively loading visible pages;
+- side-by-side display of the scan and OCR layer;
+- OCR layout, PDF order, and geometric order modes;
 - OCR overlay;
-- stavy souborů, problematické stránky, poznámky a poslední pozice;
-- atomicky zapisovaný `pdf-ocr-reviewer.manifest.json`;
-- export výsledků do CSV;
-- automatické backendové testy;
-- automatické one-file buildy pro Linux x86_64 a Windows x86_64 přes GitHub Actions.
+- file statuses, problem pages, notes, and last position;
+- atomically written `pdf-ocr-reviewer.manifest.json`;
+- CSV export of review results;
+- automated backend tests;
+- automated one-file builds for Linux x86_64 and Windows x86_64 through GitHub Actions.
 
-## Hotová binárka
+## Prebuilt binary
 
-Každý push na `main` spustí testy a vytvoří dva samostatné one-file artefakty v GitHub Actions:
+Every push to `main` runs the tests and creates two separate one-file artifacts in GitHub Actions:
 
 - `pdf-ocr-reviewer-linux-x86_64`
 - `pdf-ocr-reviewer-windows-x86_64.exe`
 
-Linuxová binárka po stažení potřebuje pouze nastavit příznak spuštění:
+After downloading, the Linux binary only needs the executable bit:
 
 ```bash
 chmod +x pdf-ocr-reviewer-linux-x86_64
 ./pdf-ocr-reviewer-linux-x86_64
 ```
 
-Linuxový one-file build před spuštěním systémového prohlížeče dočasně obnoví původní `LD_LIBRARY_PATH` uložený PyInstallerem v `LD_LIBRARY_PATH_ORIG`. Tím systémový Firefox/Chromium nenačítá nekompatibilní sdílené knihovny z dočasného adresáře one-file balíčku. Po spuštění prohlížeče aplikace obnoví vlastní PyInstaller prostředí.
+Before launching the system browser, the Linux one-file build temporarily restores the original `LD_LIBRARY_PATH` saved by PyInstaller in `LD_LIBRARY_PATH_ORIG`. This prevents the system Firefox/Chromium process from loading incompatible shared libraries from the one-file bundle's temporary directory. After the browser starts, the application restores its own PyInstaller environment.
 
-Při vytvoření tagu `v*`, například `v0.1.0`, stejný workflow po úspěšném testu a buildu automaticky vytvoří GitHub Release. Release obsahuje obě one-file binárky a `SHA256SUMS.txt`.
+When a `v*` tag is created, for example `v0.1.0`, the same workflow automatically creates a GitHub Release after successful tests and builds. The release contains both one-file binaries and `SHA256SUMS.txt`.
 
-Každá sestavená binárka před publikováním projde vlastním:
+Every built binary runs its own self-test before publication:
 
 ```bash
 pdf-ocr-reviewer --self-test
 ```
 
-Self-test ověřuje import PyMuPDF a WebUI, Tk/Tcl runtime, přítomnost zabalených UI souborů a skutečné vytvoření, otevření a vykreslení testovacího PDF.
+The self-test verifies the PyMuPDF and WebUI imports, the Tk/Tcl runtime, the bundled UI assets, and the actual creation, opening, and rendering of a test PDF.
 
-## Spuštění ze zdrojového kódu
+## Running from source
 
 ```bash
 python -m venv .venv
@@ -51,44 +51,44 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-Volitelné otevření složky při startu:
+Optionally open a folder at startup:
 
 ```bash
 python main.py --folder "/path/to/pdf-folder"
 ```
 
-Self-test zdrojové instalace:
+Self-test of the source installation:
 
 ```bash
 python main.py --self-test
 ```
 
-Testy:
+Tests:
 
 ```bash
 python -m pip install -r requirements-dev.txt
 pytest
 ```
 
-## Lokální one-file build
+## Local one-file build
 
 ```bash
 python -m pip install -r requirements-build.txt
 pyinstaller --noconfirm --clean pdf-ocr-reviewer.spec
 ```
 
-Výsledek vznikne jako `dist/pdf-ocr-reviewer` na Linuxu nebo `dist/pdf-ocr-reviewer.exe` na Windows.
+The result is `dist/pdf-ocr-reviewer` on Linux or `dist/pdf-ocr-reviewer.exe` on Windows.
 
-## Dokumentace a pokračování práce
+## Documentation and continued development
 
-- [Cíl, technická rozhodnutí a spuštění](docs/product-overview.md)
-- [WebUI reference a převzaté vzory](docs/webui-reference.md)
-- [Přehled uživatelského rozhraní](docs/ui-overview.md)
-- [Levý sloupec a společný scroll](docs/ui-columns-and-scroll.md)
-- [OCR režimy a klávesové ovládání](docs/ui-ocr-and-controls.md)
-- [Struktura projektu](docs/project-structure.md)
+- [Goal, technical decisions, and startup](docs/product-overview.md)
+- [WebUI reference and adopted patterns](docs/webui-reference.md)
+- [User interface overview](docs/ui-overview.md)
+- [Left column and shared scroll](docs/ui-columns-and-scroll.md)
+- [OCR modes and keyboard controls](docs/ui-ocr-and-controls.md)
+- [Project structure](docs/project-structure.md)
 - [Backend API](docs/backend-api.md)
-- [Transport vykreslených stran](docs/page-transport.md)
-- [Implementační plán, testy, pracovní stav a další kroky](docs/implementation-plan.md)
+- [Rendered page transport](docs/page-transport.md)
+- [Implementation plan, tests, work status, and next steps](docs/implementation-plan.md)
 
-Podrobný pracovní stav, decision log a přesný následující krok jsou vedeny v druhém dokumentu, aby bylo možné po přerušení navázat bez domýšlení předchozí práce.
+Detailed work status, the decision log, and the exact next step are maintained in the second document so development can resume after an interruption without reconstructing prior work from memory.

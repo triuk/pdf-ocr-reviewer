@@ -22,7 +22,7 @@ def select_folder(initial_folder: Path | None = None) -> Path | None:
             parent=root,
             initialdir=str(initial_folder) if initial_folder else None,
             mustexist=True,
-            title="Vyberte složku s PDF",
+            title="Select a folder with PDFs",
         )
     except tk.TclError as exc:
         raise FolderDialogError("The native folder dialog could not be opened.") from exc

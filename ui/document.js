@@ -8,7 +8,7 @@ async function openDocumentF(fileId) {
     state.activeFileId = fileId;
     state.document = documentData;
     if (documentData.persistence_error) setSaveState(documentData.persistence_error.message, true);
-    else setSaveState("Manifest je zapisovatelný", false);
+    else setSaveState("Manifest is writable", false);
     state.pageData.clear();
     renderFileList();
     renderDocumentShell();
@@ -27,7 +27,7 @@ function clearDocument() {
   releasePageResources();
   state.activeFileId = null;
   state.document = null;
-  elements.documentNameId.textContent = "Vyberte PDF";
+  elements.documentNameId.textContent = "Select a PDF";
   elements.documentMetaId.textContent = "";
   elements.pagesId.replaceChildren();
   elements.emptyStateId.hidden = false;
@@ -39,7 +39,7 @@ function renderDocumentShell() {
   const doc = state.document;
   elements.pageScrollId.scrollTop = 0;
   elements.documentNameId.textContent = doc.name;
-  elements.documentMetaId.textContent = `${doc.page_count} stran`;
+  elements.documentMetaId.textContent = `${doc.page_count} pages`;
   elements.emptyStateId.hidden = true;
   elements.pagesId.replaceChildren();
 
@@ -52,11 +52,11 @@ function renderDocumentShell() {
     const label = document.createElement("div");
     label.className = "page-label";
     const pageText = document.createElement("span");
-    pageText.textContent = `Strana ${page.page_index + 1}`;
+    pageText.textContent = `Page ${page.page_index + 1}`;
     const problemButton = document.createElement("button");
     problemButton.type = "button";
     problemButton.className = "problem-page-button";
-    problemButton.textContent = "Chyba";
+    problemButton.textContent = "Error";
     problemButton.classList.toggle("active", doc.problem_pages.includes(page.page_index));
     problemButton.addEventListener("click", () => toggleProblemPageF(page.page_index, problemButton));
     label.append(pageText, problemButton);
@@ -75,7 +75,7 @@ function createPagePane(className, page) {
   pane.style.aspectRatio = `${page.width} / ${page.height}`;
   const placeholder = document.createElement("div");
   placeholder.className = "page-placeholder";
-  placeholder.textContent = "Načítání při přiblížení…";
+  placeholder.textContent = "Loading when nearby…";
   pane.append(placeholder);
   return pane;
 }

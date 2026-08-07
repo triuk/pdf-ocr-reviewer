@@ -215,7 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindElements();
   attachEvents();
   if (typeof webui === "undefined") {
-    showToast("Soubor webui.js nebyl načten.", true);
+    showToast("The webui.js file was not loaded.", true);
     return;
   }
   webui.setEventCallback(async (eventType) => {
@@ -223,7 +223,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try { await syncStateF(); }
       catch (error) { showToast(error.message, true); }
     } else if (eventType === webui.event.DISCONNECTED) {
-      showToast("Spojení s backendem bylo ukončeno.", true);
+      showToast("The backend connection was closed.", true);
     }
   });
 });

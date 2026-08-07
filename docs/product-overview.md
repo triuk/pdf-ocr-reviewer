@@ -1,74 +1,74 @@
-# Architektura a návrh
+# Architecture and design
 
-## 1. Cíl aplikace
+## 1. Application goal
 
-Aplikace načte složku s PDF a nabídne pracovní plochu se třemi sloupci:
+The application loads a folder with PDFs and provides a workspace with three columns:
 
-1. vlevo seznam PDF souborů;
-2. uprostřed obrazové náhledy všech stran vybraného PDF pod sebou;
-3. vpravo odpovídající vizualizaci OCR vrstvy jednotlivých stran.
+1. a list of PDF files on the left;
+2. image previews of all pages of the selected PDF stacked vertically in the center;
+3. a corresponding visualization of each page's OCR layer on the right.
 
-Uživatel bude přepínat soubory v levém seznamu a souvisle rolovat jejich stránky. Prostřední a pravý sloupec musí zůstat přesně vertikálně zarovnané, aby bylo možné bez hledání porovnávat sken s OCR.
+The user switches files in the left list and continuously scrolls through their pages. The center and right columns must remain exactly vertically aligned so the scan can be compared with OCR without searching for the corresponding position.
 
-Aplikace v první verzi nebude PDF opravovat ani jinak měnit. Bude sloužit pouze ke kontrole, označování problematických souborů a stran a ukládání výsledků kontroly.
+The first version of the application will not repair or otherwise modify PDFs. It is intended only for review, marking problem files and pages, and saving review results.
 
 ---
 
-## 2. Schválená a navržená technická rozhodnutí
+## 2. Approved and proposed technical decisions
 
-| Oblast | Rozhodnutí |
+| Area | Decision |
 |---|---|
-| Typ aplikace | Lokální desktopová aplikace s webovým rozhraním |
-| GUI | WebUI / Python balíček `webui2` |
+| Application type | Local desktop application with a web interface |
+| GUI | WebUI / Python package `webui2` |
 | Backend | Python |
-| Frontend | HTML, CSS a čistý JavaScript bez Reactu nebo Vue |
-| Práce s PDF | PyMuPDF |
-| Trvalý stav | `pdf-ocr-reviewer.manifest.json` ve zvolené složce |
-| Databáze | SQLite se v první verzi nepoužije |
-| Úpravy PDF | Zakázány; zdrojové PDF se otevírá pouze pro čtení |
-| Základní režim | Jedna lokální aplikace a jeden klient |
-| Způsob rolování | Jeden společný svislý scroll pro sken i OCR |
-| Načítání stran | Pouze viditelné a blízké stránky, ne celý dokument najednou |
-| Výchozí obrazový formát | PNG; případná změna až podle měření |
+| Frontend | HTML, CSS, and vanilla JavaScript without React or Vue |
+| PDF handling | PyMuPDF |
+| Persistent state | `pdf-ocr-reviewer.manifest.json` in the selected folder |
+| Database | SQLite is not used in the first version |
+| PDF modifications | Forbidden; source PDFs are opened read-only |
+| Base mode | One local application and one client |
+| Scrolling | One shared vertical scroll for scan and OCR |
+| Page loading | Only visible and nearby pages, not the whole document at once |
+| Default image format | PNG; change only if measurements justify it |
 
-### Instalace a spuštění
+### Installation and startup
 
 ```bash
 python -m venv .venv
-# Aktivujte virtuální prostředí podle používaného systému.
+# Activate the virtual environment for your operating system.
 pip install -r requirements.txt
 python main.py
 ```
 
-Otevření konkrétní složky při startu:
+Open a specific folder at startup:
 
 ```bash
 python main.py --folder "D:\\PDF\\OCR"
 ```
 
-Automatické testy:
+Automated tests:
 
 ```bash
 pytest -q
 ```
 
-Benchmark jedné skutečné strany bez WebUI transportu:
+Benchmark one real page without WebUI transport:
 
 ```bash
-python tools/benchmark_page.py "D:\\PDF\\OCR\\soubor.pdf" --page 1 --width 1200
+python tools/benchmark_page.py "D:\\PDF\\OCR\\file.pdf" --page 1 --width 1200
 ```
 
-### Proč není potřeba SQL
+### Why SQL is not needed
 
-Manifest JSON postačuje pro:
+A JSON manifest is sufficient for:
 
-- stav kontroly jednotlivých souborů;
-- seznam problematických stran;
-- poznámku k souboru;
-- poslední otevřený soubor a stránku;
-- nastavení zobrazení;
-- rozpoznání, že se PDF od poslední kontroly změnilo.
+- review status of individual files;
+- the list of problem pages;
+- a note for each file;
+- the last opened file and page;
+- display settings;
+- detecting that a PDF has changed since the last review.
 
-SQLite by se zvažovalo až při ukládání velkého množství anotací jednotlivých slov, historie změn, souběžné práci více procesů nebo složitých dotazech nad daty.
+SQLite would only be considered when storing large numbers of per-word annotations, change history, concurrent work by multiple processes, or complex queries over the data.
 
 ---

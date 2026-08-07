@@ -1,6 +1,6 @@
-# Backend a transport
+# Backend and transport
 
-## 5. Navržená struktura projektu
+## 5. Proposed project structure
 
 ```text
 pdf-ocr-reviewer/
@@ -36,17 +36,17 @@ pdf-ocr-reviewer/
     └── README.md
 ```
 
-### Odpovědnosti modulů
+### Module responsibilities
 
-- `main.py` – pouze zpracování argumentů a spuštění aplikace;
-- `application.py` – WebUI okno, lifecycle a sestavení komponent;
-- `api.py` – všechny funkce navázané pomocí `window.bind()`;
-- `models.py` – datové modely a validační konstanty;
-- `folder_dialog.py` – výběr složky a jeho náhradní řešení;
-- `folder_scanner.py` – bezpečný seznam PDF a jejich identity;
-- `manifest.py` – načtení, migrace, validace a bezpečný zápis JSON;
-- `pdf_document.py` – metadata PDF a extrakce OCR;
-- `render_worker.py` – fronta požadavků na vykreslení;
-- `raw_packet.py` – balení a rozbalení binárních zpráv pro frontend.
+- `main.py` – argument processing and application startup only;
+- `application.py` – WebUI window, lifecycle, and component assembly;
+- `api.py` – all functions bound through `window.bind()`;
+- `models.py` – data models and validation constants;
+- `folder_dialog.py` – folder selection and its fallback solution;
+- `folder_scanner.py` – safe PDF listing and file identities;
+- `manifest.py` – JSON loading, migration, validation, and safe writing;
+- `pdf_document.py` – PDF metadata and OCR extraction;
+- `render_worker.py` – render request queue;
+- `raw_packet.py` – packing and unpacking binary messages for the frontend.
 
 ---
