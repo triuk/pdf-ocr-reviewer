@@ -62,7 +62,7 @@ function showToast(message, isError = false) {
 
 async function callBackend(name, ...args) {
   if (typeof webui === "undefined" || !webui.isConnected()) {
-    throw new Error("Spojení s backendem není dostupné.");
+    throw new Error("The backend connection is unavailable.");
   }
   const fn = webui[name];
   if (typeof fn !== "function") throw new Error(`Backend function ${name} is unavailable.`);
@@ -74,7 +74,7 @@ async function syncStateF() {
   applyPublicState(data);
   if (data.startup_error) showToast(data.startup_error.message, true);
   if (data.persistence_error) setSaveState(data.persistence_error.message, true);
-  else if (data.folder) setSaveState("Manifest je zapisovatelný", false);
+  else if (data.folder) setSaveState("Manifest is writable", false);
   if (state.ui.last_file && state.files.some((file) => file.file_id === state.ui.last_file)) {
     await openDocumentF(state.ui.last_file);
   }
@@ -99,4 +99,3 @@ function applyPublicState(data) {
     state.applyingState = false;
   }
 }
-

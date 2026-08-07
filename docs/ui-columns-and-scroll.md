@@ -1,31 +1,31 @@
-# Levý sloupec a společný scroll
+# Left column and shared scroll
 
-### 4.2 Levý sloupec
+### 4.2 Left column
 
-Každý soubor zobrazí:
+Each file displays:
 
-- stav kontroly;
-- název;
-- počet stran po načtení metadat;
-- označení, že se soubor od poslední kontroly změnil;
-- počet označených problematických stran.
+- review status;
+- name;
+- page count after metadata is loaded;
+- an indication that the file has changed since the last review;
+- number of marked problem pages.
 
-Stavy:
+Statuses:
 
-- `unreviewed` – nezkontrolováno;
-- `ok` – v pořádku;
-- `error` – nalezena chyba OCR;
-- `needs_review` – vyžaduje další kontrolu.
+- `unreviewed` – not reviewed;
+- `ok` – OK;
+- `error` – OCR error found;
+- `needs_review` – requires further review.
 
-Nad seznamem bude:
+Above the list:
 
-- textový filtr názvu;
-- filtr podle stavu;
-- souhrn počtů souborů v jednotlivých stavech.
+- text filter by name;
+- filter by status;
+- summary counts of files in each status.
 
-### 4.3 Prostřední a pravý sloupec
+### 4.3 Center and right columns
 
-Oba sloupce budou součástí jednoho společného scrollovacího kontejneru. Každá stránka vytvoří jeden řádek CSS gridu:
+Both columns are part of one shared scrolling container. Each page creates one CSS grid row:
 
 ```text
 page-row
@@ -33,13 +33,13 @@ page-row
 └── ocr-pane
 ```
 
-Tím se vyloučí postupné rozjíždění dvou nezávislých scrollbarů.
+This prevents two independent scrollbars from gradually drifting out of alignment.
 
-Každý řádek bude mít:
+Each row contains:
 
-- číslo stránky;
-- tlačítko pro označení problematické stránky;
-- obraz stránky vlevo;
-- OCR zobrazení vpravo;
-- stejné rozměry obou ploch;
-- zachovaný poměr stran konkrétní stránky.
+- page number;
+- button for marking a problem page;
+- page image on the left;
+- OCR display on the right;
+- identical dimensions for both panes;
+- the aspect ratio of the specific page preserved.

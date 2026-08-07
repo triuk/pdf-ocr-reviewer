@@ -1,29 +1,29 @@
-# Návrh uživatelského rozhraní
+# User interface design
 
-## 4. Návrh uživatelského rozhraní
+## 4. User interface design
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ Otevřít složku | cesta | režim OCR | overlay | zoom | stav kontroly        │
+│ Open folder | path | OCR mode | overlay | zoom | review status             │
 ├──────────────────┬──────────────────────────┬───────────────────────────────┤
-│ PDF soubory      │ Sken                     │ OCR vrstva                    │
+│ PDF files        │ Scan                     │ OCR layer                     │
 │                  │                          │                               │
-│ ○ soubor-01.pdf  │ ┌──────────────────────┐ │ ┌───────────────────────────┐ │
-│ ✓ soubor-02.pdf  │ │ strana 1             │ │ │ OCR strany 1              │ │
-│ ! soubor-03.pdf  │ └──────────────────────┘ │ └───────────────────────────┘ │
-│ ? soubor-04.pdf  │                          │                               │
+│ ○ file-01.pdf    │ ┌──────────────────────┐ │ ┌───────────────────────────┐ │
+│ ✓ file-02.pdf    │ │ page 1               │ │ │ OCR for page 1            │ │
+│ ! file-03.pdf    │ └──────────────────────┘ │ └───────────────────────────┘ │
+│ ? file-04.pdf    │                          │                               │
 │                  │ ┌──────────────────────┐ │ ┌───────────────────────────┐ │
-│ Filtr            │ │ strana 2             │ │ │ OCR strany 2              │ │
-│ Stav             │ └──────────────────────┘ │ └───────────────────────────┘ │
+│ Filter           │ │ page 2               │ │ │ OCR for page 2            │ │
+│ Status           │ └──────────────────────┘ │ └───────────────────────────┘ │
 └──────────────────┴──────────────────────────┴───────────────────────────────┘
 ```
 
-### 4.1 Horní lišta
+### 4.1 Top toolbar
 
-- tlačítko **Otevřít složku**;
-- zobrazení aktuální cesty;
-- přepínač režimu OCR;
-- switch pro OCR overlay nad skenem;
-- slider zoomu;
-- tlačítka nebo klávesové akce pro stav souboru;
-- indikátor neuložených změn a případné chyby manifestu.
+- **Open folder** button;
+- current path display;
+- OCR mode selector;
+- switch for OCR overlay over the scan;
+- zoom slider;
+- buttons or keyboard actions for file status;
+- unsaved-changes indicator and manifest errors when applicable.

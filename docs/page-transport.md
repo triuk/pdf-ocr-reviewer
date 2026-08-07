@@ -1,28 +1,28 @@
-# Transport vykreslených stran
+# Rendered page transport
 
-## 7. Přenos vykreslených stran
+## 7. Transport of rendered pages
 
-Dodaný příklad ověřuje přenos binárních dat z Pythonu do JavaScriptu pomocí `send_raw()`. Stejný princip použijeme pro stránky PDF.
+The supplied example verifies binary data transfer from Python to JavaScript using `send_raw()`. We will use the same principle for PDF pages.
 
-### Navržený postup
+### Proposed flow
 
-1. Frontend vytvoří `requestId`.
-2. Zavolá `requestPageB(...)`.
-3. Backend vloží požadavek do jediné renderovací fronty.
-4. Prototyp požadavek serializuje zámkem, vykreslí PNG a extrahuje OCR data ve WebUI callbacku.
-5. Python odešle jeden binární paket do frontend funkce `pageReadyF(rawData)`.
-6. JavaScript vytvoří z obrazových bytů `Blob URL` a doplní OCR panel.
-7. Staré Blob URL se při odložení stránky zruší.
+1. The frontend creates a `requestId`.
+2. It calls `requestPageB(...)`.
+3. The backend places the request into a single render queue.
+4. The prototype serializes the request with a lock, renders PNG, and extracts OCR data inside the WebUI callback.
+5. Python sends one binary packet to the frontend function `pageReadyF(rawData)`.
+6. JavaScript creates a `Blob URL` from the image bytes and fills the OCR panel.
+7. Old Blob URLs are revoked when a page is unloaded.
 
-### Předběžný formát paketu
+### Preliminary packet format
 
 ```text
-4 bytes      délka JSON hlavičky, little endian
-N bytes      JSON hlavička v UTF-8
+4 bytes      JSON header length, little endian
+N bytes      UTF-8 JSON header
 remaining    PNG data
 ```
 
-Hlavička:
+Header:
 
 ```json
 {
@@ -39,21 +39,21 @@ Hlavička:
 }
 ```
 
-### Technická ověřovací brána
+### Technical validation gate
 
-Hned v prvním prototypu se změří:
+The first prototype will immediately measure:
 
-- spolehlivost přenosu větší PNG stránky přes `send_raw()`;
-- rychlost přenosu;
-- paměť v Pythonu a prohlížeči;
-- chování při rychlém přechodu mezi soubory.
+- reliability of transferring a larger PNG page through `send_raw()`;
+- transfer speed;
+- memory use in Python and the browser;
+- behavior during rapid switching between files.
 
-Pokud bude jeden kombinovaný paket příliš velký nebo nepraktický, zachová se stejné API a vymění se pouze transportní vrstva za:
+If one combined packet is too large or impractical, the same API will be preserved and only the transport layer will be replaced by:
 
-1. oddělený binární obraz a JSON metadata; nebo
-2. dočasné lokální soubory obsluhované backendem.
+1. a separate binary image and JSON metadata; or
+2. temporary local files served by the backend.
 
-Tato změna nesmí ovlivnit manifest ani zbytek UI.
+This change must not affect the manifest or the rest of the UI.
 
 ---
 

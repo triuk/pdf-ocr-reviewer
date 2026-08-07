@@ -56,7 +56,7 @@ function renderLoadedPage(pageIndex) {
 
   const image = document.createElement("img");
   image.src = loaded.objectUrl;
-  image.alt = `Sken strany ${pageIndex + 1}`;
+  image.alt = `Scan of page ${pageIndex + 1}`;
   scanPane.append(image);
 
   const overlay = document.createElement("div");
@@ -74,7 +74,7 @@ function renderOcrPane(pane, ocr) {
     if (!ocr.layout_items.length) {
       const empty = document.createElement("div");
       empty.className = "page-placeholder";
-      empty.textContent = "OCR vrstva je prázdná.";
+      empty.textContent = "The OCR layer is empty.";
       pane.append(empty);
       return;
     }
@@ -86,7 +86,7 @@ function renderOcrPane(pane, ocr) {
   }
   const pre = document.createElement("pre");
   pre.className = "ocr-text";
-  pre.textContent = selectedText || "OCR vrstva je prázdná.";
+  pre.textContent = selectedText || "The OCR layer is empty.";
   pane.append(pre);
 }
 
@@ -115,8 +115,8 @@ function unloadPage(pageIndex) {
   const page = state.document.pages[pageIndex];
   const scanPane = row.querySelector(".scan-pane");
   const ocrPane = row.querySelector(".ocr-pane");
-  scanPane.replaceChildren(createPlaceholder("Načíst při přiblížení…"));
-  ocrPane.replaceChildren(createPlaceholder("Načíst při přiblížení…"));
+  scanPane.replaceChildren(createPlaceholder("Load when nearby…"));
+  ocrPane.replaceChildren(createPlaceholder("Load when nearby…"));
   scanPane.style.aspectRatio = `${page.width} / ${page.height}`;
   ocrPane.style.aspectRatio = `${page.width} / ${page.height}`;
 }
@@ -152,4 +152,3 @@ function applyZoom(reloadVisiblePages = true) {
 function rerenderLoadedOcr() {
   for (const [pageIndex] of state.pageData) renderLoadedPage(pageIndex);
 }
-

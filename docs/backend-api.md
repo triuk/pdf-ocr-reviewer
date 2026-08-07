@@ -1,34 +1,34 @@
-# Backend API a transport stránek
+# Backend API and page transport
 
-## 6. Backend API mezi JavaScriptem a Pythonem
+## 6. Backend API between JavaScript and Python
 
-Názvy končí:
+Names end with:
 
-- `B` pro funkce implementované v backendu;
-- `F` pro funkce implementované ve frontendu.
+- `B` for functions implemented in the backend;
+- `F` for functions implemented in the frontend.
 
-Tento vzor je převzat z referenčního projektu.
+This pattern is adopted from the reference project.
 
-### Navržené backend funkce
+### Proposed backend functions
 
-| Funkce | Účel |
+| Function | Purpose |
 |---|---|
-| `syncStateB()` | vrátí celý aktuální stav potřebný po připojení UI |
-| `selectFolderB()` | otevře lokální dialog pro výběr složky |
-| `openFolderB(path)` | ověří cestu, načte manifest a proskenuje PDF |
-| `refreshFolderB()` | znovu proskenuje aktuální složku |
-| `openDocumentB(fileId)` | otevře PDF a vrátí metadata stran |
-| `requestPageB(requestId, fileId, pageIndex, renderWidth, ocrMode)` | zařadí vykreslení stránky do fronty |
-| `setFileStatusB(fileId, status)` | nastaví stav kontroly |
-| `setLastPageB(fileId, pageIndex)` | uloží poslední pozici |
-| `toggleProblemPageB(fileId, pageIndex)` | přidá nebo odebere problematickou stránku |
-| `setFileNoteB(fileId, note)` | uloží poznámku |
-| `setUiOptionsB(optionsJson)` | uloží zoom, OCR režim, overlay a filtry |
-| `exportCsvB()` | vytvoří CSV souhrn výsledků kontroly |
+| `syncStateB()` | returns the complete current state needed after the UI connects |
+| `selectFolderB()` | opens the local folder selection dialog |
+| `openFolderB(path)` | validates the path, loads the manifest, and scans PDFs |
+| `refreshFolderB()` | rescans the current folder |
+| `openDocumentB(fileId)` | opens a PDF and returns page metadata |
+| `requestPageB(requestId, fileId, pageIndex, renderWidth, ocrMode)` | queues a page render request |
+| `setFileStatusB(fileId, status)` | sets the review status |
+| `setLastPageB(fileId, pageIndex)` | saves the last position |
+| `toggleProblemPageB(fileId, pageIndex)` | adds or removes a problem page |
+| `setFileNoteB(fileId, note)` | saves a note |
+| `setUiOptionsB(optionsJson)` | saves zoom, OCR mode, overlay, and filters |
+| `exportCsvB()` | creates a CSV summary of review results |
 
-### Formát běžných odpovědí
+### Format of regular responses
 
-Malé odpovědi se budou vracet jako JSON řetězec v jednotném obalu:
+Small responses are returned as a JSON string in a consistent envelope:
 
 ```json
 {
@@ -38,7 +38,7 @@ Malé odpovědi se budou vracet jako JSON řetězec v jednotném obalu:
 }
 ```
 
-Při chybě:
+On error:
 
 ```json
 {
@@ -46,11 +46,11 @@ Při chybě:
   "data": null,
   "error": {
     "code": "PDF_OPEN_FAILED",
-    "message": "Soubor nelze otevřít."
+    "message": "The file cannot be opened."
   }
 }
 ```
 
-Frontend nebude rozhodovat podle textu chyby, ale podle stabilního `code`.
+The frontend does not branch on the error text, but on the stable `code`.
 
 ---

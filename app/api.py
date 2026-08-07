@@ -85,7 +85,7 @@ class BackendApi:
 
     def refresh_folder_callback(self, event: Any) -> None:
         if self.current_folder is None:
-            event.return_string(self._error("NO_FOLDER", "Nejprve otevřete složku."))
+            event.return_string(self._error("NO_FOLDER", "Open a folder first."))
             return
         try:
             event.return_string(self._ok(self.open_folder(self.current_folder)))
