@@ -4,7 +4,7 @@ Lokální desktopová aplikace pro rychlou vizuální kontrolu OCR vrstev ve vě
 
 ## Aktuální stav
 
-Je implementován první funkční prototyp:
+Je implementován funkční prototyp:
 
 - načtení složky a seznamu PDF;
 - otevření dokumentu a průběžné načítání viditelných stran;
@@ -14,11 +14,34 @@ Je implementován první funkční prototyp:
 - stavy souborů, problematické stránky, poznámky a poslední pozice;
 - atomicky zapisovaný `pdf-ocr-reviewer.manifest.json`;
 - export výsledků do CSV;
-- automatické backendové testy.
+- automatické backendové testy;
+- automatické one-file buildy pro Linux x86_64 a Windows x86_64 přes GitHub Actions.
 
-Skutečný běh WebUI musí být ještě ověřen v prostředí s dostupným balíčkem `webui2`.
+## Hotová binárka
 
-## Instalace
+Každý push na `main` spustí testy a vytvoří dva samostatné one-file artefakty v GitHub Actions:
+
+- `pdf-ocr-reviewer-linux-x86_64`
+- `pdf-ocr-reviewer-windows-x86_64.exe`
+
+Linuxová binárka po stažení potřebuje pouze nastavit příznak spuštění:
+
+```bash
+chmod +x pdf-ocr-reviewer-linux-x86_64
+./pdf-ocr-reviewer-linux-x86_64
+```
+
+Při vytvoření tagu `v*`, například `v0.1.0`, stejný workflow po úspěšném testu a buildu automaticky vytvoří GitHub Release. Release obsahuje obě one-file binárky a `SHA256SUMS.txt`.
+
+Každá sestavená binárka před publikováním projde vlastním:
+
+```bash
+pdf-ocr-reviewer --self-test
+```
+
+Self-test ověřuje import PyMuPDF a WebUI, přítomnost zabalených UI souborů a skutečné vytvoření, otevření a vykreslení testovacího PDF.
+
+## Spuštění ze zdrojového kódu
 
 ```bash
 python -m venv .venv
@@ -32,12 +55,27 @@ Volitelné otevření složky při startu:
 python main.py --folder "/path/to/pdf-folder"
 ```
 
+Self-test zdrojové instalace:
+
+```bash
+python main.py --self-test
+```
+
 Testy:
 
 ```bash
 python -m pip install -r requirements-dev.txt
 pytest
 ```
+
+## Lokální one-file build
+
+```bash
+python -m pip install -r requirements-build.txt
+pyinstaller --noconfirm --clean pdf-ocr-reviewer.spec
+```
+
+Výsledek vznikne jako `dist/pdf-ocr-reviewer` na Linuxu nebo `dist/pdf-ocr-reviewer.exe` na Windows.
 
 ## Dokumentace a pokračování práce
 
