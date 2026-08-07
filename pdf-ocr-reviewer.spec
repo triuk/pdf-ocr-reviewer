@@ -1,13 +1,19 @@
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_dynamic_libs
+
 
 ROOT = Path(SPECPATH).resolve()
+
+webui_binaries = collect_dynamic_libs("webui")
 
 datas = [
     (str(ROOT / "ui"), "ui"),
 ]
 
-binaries = []
+binaries = [
+    *webui_binaries,
+]
 
 hiddenimports = [
     "webui",
