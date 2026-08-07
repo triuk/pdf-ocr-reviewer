@@ -1,25 +1,32 @@
+import sys
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_dynamic_libs
+from PyInstaller.utils.hooks import collect_all
 
 
 ROOT = Path(SPECPATH).resolve()
 
-webui_binaries = collect_dynamic_libs("webui")
+webui_datas, webui_binaries, webui_hiddenimports = collect_all("webui")
 
 datas = [
     (str(ROOT / "ui"), "ui"),
+    *webui_datas,
 ]
 
 binaries = [
     *webui_binaries,
 ]
 
-hiddenimports = [
-    "webui",
-    "webui.webui",
-    "pymupdf",
-]
+hiddenimports = sorted(
+    set(
+        [
+            "webui",
+            "webui.webui",
+            "pymupdf",
+        ]
+        + webui_hiddenimports
+    )
+)
 
 analysis = Analysis(
     [str(ROOT / "main.py")],
@@ -46,7 +53,7 @@ exe = EXE(
     name="pdf-ocr-reviewer",
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,
+    strip=sys.platform.startswith("linux"),
     upx=False,
     console=False,
     disable_windowed_traceback=False,
