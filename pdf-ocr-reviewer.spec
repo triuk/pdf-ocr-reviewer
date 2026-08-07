@@ -8,20 +8,6 @@ ROOT = Path(SPECPATH).resolve()
 
 webui_datas, webui_binaries, webui_hiddenimports = collect_all("webui")
 
-if sys.platform.startswith("linux"):
-    incompatible_linux_webui_arches = (
-        "webui-linux-gcc-arm/",
-        "webui-linux-gcc-arm64/",
-    )
-    webui_binaries = [
-        entry
-        for entry in webui_binaries
-        if not any(
-            marker in Path(entry[0]).as_posix()
-            for marker in incompatible_linux_webui_arches
-        )
-    ]
-
 datas = [
     (str(ROOT / "ui"), "ui"),
     *webui_datas,
