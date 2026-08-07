@@ -1,31 +1,19 @@
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_all
-
 
 ROOT = Path(SPECPATH).resolve()
 
-webui_datas, webui_binaries, webui_hiddenimports = collect_all("webui")
-
 datas = [
     (str(ROOT / "ui"), "ui"),
-    *webui_datas,
 ]
 
-binaries = [
-    *webui_binaries,
-]
+binaries = []
 
-hiddenimports = sorted(
-    set(
-        [
-            "webui",
-            "webui.webui",
-            "pymupdf",
-        ]
-        + webui_hiddenimports
-    )
-)
+hiddenimports = [
+    "webui",
+    "webui.webui",
+    "pymupdf",
+]
 
 analysis = Analysis(
     [str(ROOT / "main.py")],
