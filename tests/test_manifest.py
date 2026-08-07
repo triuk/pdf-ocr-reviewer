@@ -18,6 +18,8 @@ def test_missing_manifest_returns_defaults(tmp_path: Path) -> None:
     manifest = load_manifest(tmp_path)
     assert manifest["schema_version"] == 1
     assert manifest["files"] == {}
+    assert manifest["ui"]["ocr_mode"] == "pdf_order"
+    assert manifest["ui"]["overlay"] is True
 
 
 def test_manifest_round_trip_preserves_unknown_fields(tmp_path: Path) -> None:
