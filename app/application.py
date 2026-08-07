@@ -6,6 +6,10 @@ from typing import Any
 from .api import BackendApi
 
 
+def get_ui_folder() -> Path:
+    return Path(__file__).resolve().parent.parent / "ui"
+
+
 class PdfOcrReviewerApplication:
     def __init__(self, initial_folder: Path | None = None):
         self.initial_folder = initial_folder
@@ -26,8 +30,7 @@ class PdfOcrReviewerApplication:
 
         self.window = window_factory()
         self.api.bind(self.window)
-        ui_folder = Path(__file__).resolve().parent.parent / "ui"
-        self.window.set_root_folder(str(ui_folder))
+        self.window.set_root_folder(str(get_ui_folder()))
         shown = self.window.show("index.html")
         if shown is False:
             raise RuntimeError("WebUI could not open the application window.")
