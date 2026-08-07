@@ -34,8 +34,8 @@ def default_manifest() -> dict[str, Any]:
         "ui": {
             "last_file": None,
             "zoom_percent": 100,
-            "ocr_mode": "layout",
-            "overlay": False,
+            "ocr_mode": "pdf_order",
+            "overlay": True,
             "status_filter": "all",
             "name_filter": "",
             "auto_advance": True,
@@ -79,9 +79,9 @@ def validate_manifest(data: Any) -> None:
     zoom = ui.get("zoom_percent", 100)
     if not isinstance(zoom, int) or not 25 <= zoom <= 400:
         raise ManifestFormatError("ui.zoom_percent must be an integer from 25 to 400.")
-    if ui.get("ocr_mode", "layout") not in VALID_OCR_MODES:
+    if ui.get("ocr_mode", "pdf_order") not in VALID_OCR_MODES:
         raise ManifestFormatError("ui.ocr_mode has an unsupported value.")
-    if not isinstance(ui.get("overlay", False), bool):
+    if not isinstance(ui.get("overlay", True), bool):
         raise ManifestFormatError("ui.overlay must be a boolean.")
 
     for file_id, entry in files.items():
