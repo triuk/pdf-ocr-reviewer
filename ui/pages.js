@@ -98,53 +98,94 @@ function renderOcrPane(pane, ocr) {
 }
 
 function renderSelectableTextLayer(container, ocr) {
-  const items = ocr.layout_items;
-  for (let index = 0; index < items.length; index += 1) {
-    const item = items[index];
-    const token = document.createElement("span");
-    token.className = "scan-text-token";
-    token.style.left = `${(item.x0 / ocr.page_width) * 100}%`;
-    token.style.top = `${(item.y0 / ocr.page_height) * 100}%`;
-    token.style.width = `${((item.x1 - item.x0) / ocr.page_width) * 100}%`;
-    token.style.height = `${((item.y1 - item.y0) / ocr.page_height) * 100}%`;
+  const runs = selectableTextRuns(ocr.layout_items);
+  for (let index = 0; index < runs.length; index += 1) {
+    const run = runs[index];
+    const span = document.createElement("span");
+    span.className = "scan-text-run";
+    span.textContent = run.items.map((item) => item.text).join(" ");
+    span.style.left = `${(run.x0 / ocr.page_width) * 100}%`;
+    span.style.top = `${(run.y0 / ocr.page_height) * 100}%`;
+    span.dataset.targetWidthRatio = `${(run.x1 - run.x0) / ocr.page_width}`;
+    const fontPercent = Math.max(0.5, ((run.y1 - run.y0) / ocr.page_height) * 100 * 0.82);
+    span.style.fontSize = `${fontPercent}cqh`;
+    span.setAttribute("role", "presentation");
+    container.append(span);
 
-    const word = document.createElement("span");
-    word.className = "scan-text-word";
-    word.textContent = item.text;
-    const fontPercent = Math.max(0.5, ((item.y1 - item.y0) / ocr.page_height) * 100 * 0.82);
-    word.style.fontSize = `${fontPercent}cqh`;
-    token.append(word);
-
-    const separator = document.createElement("span");
-    separator.className = "scan-text-separator";
-    separator.textContent = selectableTextSeparator(items, index);
-    token.append(separator);
-
-    container.append(token);
+    const next = runs[index + 1];
+    if (!next) continue;
+    appendSelectableBreak(container);
+    if (next.block !== run.block) appendSelectableBreak(container);
   }
 
-  requestAnimationFrame(() => fitSelectableTextWords(container));
+  const endOfContent = document.createElement("div");
+  endOfContent.className = "scan-text-end";
+  container.append(endOfContent);
+  bindSelectableTextLayer(container);
+
+  requestAnimationFrame(() => fitSelectableTextRuns(container));
 }
 
-function selectableTextSeparator(items, index) {
-  const current = items[index];
-  const next = items[index + 1];
-  if (!next) return "";
-  if (next.block !== current.block) return "\n\n";
-  if (next.line !== current.line) return "\n";
-  return " ";
+function selectableTextRuns(items) {
+  const runs = [];
+  let current = null;
+  for (const item of items) {
+    if (!current || current.block !== item.block || current.line !== item.line) {
+      current = {
+        block: item.block,
+        line: item.line,
+        x0: item.x0,
+        y0: item.y0,
+        x1: item.x1,
+        y1: item.y1,
+        items: [],
+      };
+      runs.push(current);
+    }
+    current.items.push(item);
+    current.x0 = Math.min(current.x0, item.x0);
+    current.y0 = Math.min(current.y0, item.y0);
+    current.x1 = Math.max(current.x1, item.x1);
+    current.y1 = Math.max(current.y1, item.y1);
+  }
+  return runs;
 }
 
-function fitSelectableTextWords(container) {
+function appendSelectableBreak(container) {
+  const br = document.createElement("br");
+  br.className = "scan-text-break";
+  br.setAttribute("role", "presentation");
+  container.append(br);
+}
+
+function bindSelectableTextLayer(container) {
+  container.addEventListener("pointerdown", () => {
+    container.classList.add("selecting");
+    const controller = new AbortController();
+    const finish = () => {
+      container.classList.remove("selecting");
+      controller.abort();
+    };
+    document.addEventListener("pointerup", finish, { signal: controller.signal });
+    window.addEventListener("blur", finish, { signal: controller.signal });
+    document.addEventListener(
+      "keyup",
+      (event) => {
+        if (event.key === "Escape") finish();
+      },
+      { signal: controller.signal },
+    );
+  });
+}
+
+function fitSelectableTextRuns(container) {
   if (!container.isConnected) return;
-  for (const token of container.querySelectorAll(".scan-text-token")) {
-    const word = token.querySelector(".scan-text-word");
-    if (!word) continue;
-    const naturalWidth = word.offsetWidth;
-    const targetWidth = token.clientWidth;
+  for (const run of container.querySelectorAll(".scan-text-run")) {
+    const naturalWidth = run.offsetWidth;
+    const targetWidth = Number(run.dataset.targetWidthRatio) * container.clientWidth;
     if (naturalWidth <= 0 || targetWidth <= 0) continue;
     const scaleX = Math.max(0.05, Math.min(20, targetWidth / naturalWidth));
-    word.style.transform = `scaleX(${scaleX})`;
+    run.style.transform = `scaleX(${scaleX})`;
   }
 }
 
