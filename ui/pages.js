@@ -57,7 +57,14 @@ function renderLoadedPage(pageIndex) {
   const image = document.createElement("img");
   image.src = loaded.objectUrl;
   image.alt = `Scan of page ${pageIndex + 1}`;
+  image.draggable = false;
   scanPane.append(image);
+
+  const textLayer = document.createElement("div");
+  textLayer.className = "scan-text-layer";
+  textLayer.setAttribute("aria-hidden", "true");
+  renderSelectableTextLayer(textLayer, loaded.header.ocr);
+  scanPane.append(textLayer);
 
   const overlay = document.createElement("div");
   overlay.className = "scan-overlay";
@@ -88,6 +95,57 @@ function renderOcrPane(pane, ocr) {
   pre.className = "ocr-text";
   pre.textContent = selectedText || "The OCR layer is empty.";
   pane.append(pre);
+}
+
+function renderSelectableTextLayer(container, ocr) {
+  const items = ocr.layout_items;
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    const token = document.createElement("span");
+    token.className = "scan-text-token";
+    token.style.left = `${(item.x0 / ocr.page_width) * 100}%`;
+    token.style.top = `${(item.y0 / ocr.page_height) * 100}%`;
+    token.style.width = `${((item.x1 - item.x0) / ocr.page_width) * 100}%`;
+    token.style.height = `${((item.y1 - item.y0) / ocr.page_height) * 100}%`;
+
+    const word = document.createElement("span");
+    word.className = "scan-text-word";
+    word.textContent = item.text;
+    const fontPercent = Math.max(0.5, ((item.y1 - item.y0) / ocr.page_height) * 100 * 0.82);
+    word.style.fontSize = `${fontPercent}cqh`;
+    token.append(word);
+
+    const separator = document.createElement("span");
+    separator.className = "scan-text-separator";
+    separator.textContent = selectableTextSeparator(items, index);
+    token.append(separator);
+
+    container.append(token);
+  }
+
+  requestAnimationFrame(() => fitSelectableTextWords(container));
+}
+
+function selectableTextSeparator(items, index) {
+  const current = items[index];
+  const next = items[index + 1];
+  if (!next) return "";
+  if (next.block !== current.block) return "\n\n";
+  if (next.line !== current.line) return "\n";
+  return " ";
+}
+
+function fitSelectableTextWords(container) {
+  if (!container.isConnected) return;
+  for (const token of container.querySelectorAll(".scan-text-token")) {
+    const word = token.querySelector(".scan-text-word");
+    if (!word) continue;
+    const naturalWidth = word.offsetWidth;
+    const targetWidth = token.clientWidth;
+    if (naturalWidth <= 0 || targetWidth <= 0) continue;
+    const scaleX = Math.max(0.05, Math.min(20, targetWidth / naturalWidth));
+    word.style.transform = `scaleX(${scaleX})`;
+  }
 }
 
 function renderLayoutItems(container, ocr) {
