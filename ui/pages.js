@@ -57,7 +57,14 @@ function renderLoadedPage(pageIndex) {
   const image = document.createElement("img");
   image.src = loaded.objectUrl;
   image.alt = `Scan of page ${pageIndex + 1}`;
+  image.draggable = false;
   scanPane.append(image);
+
+  const textLayer = document.createElement("div");
+  textLayer.className = "scan-text-layer";
+  textLayer.setAttribute("aria-hidden", "true");
+  renderSelectableTextLayer(textLayer, loaded.header.ocr);
+  scanPane.append(textLayer);
 
   const overlay = document.createElement("div");
   overlay.className = "scan-overlay";
@@ -88,6 +95,98 @@ function renderOcrPane(pane, ocr) {
   pre.className = "ocr-text";
   pre.textContent = selectedText || "The OCR layer is empty.";
   pane.append(pre);
+}
+
+function renderSelectableTextLayer(container, ocr) {
+  const runs = selectableTextRuns(ocr.layout_items);
+  for (let index = 0; index < runs.length; index += 1) {
+    const run = runs[index];
+    const span = document.createElement("span");
+    span.className = "scan-text-run";
+    span.textContent = run.items.map((item) => item.text).join(" ");
+    span.style.left = `${(run.x0 / ocr.page_width) * 100}%`;
+    span.style.top = `${(run.y0 / ocr.page_height) * 100}%`;
+    span.dataset.targetWidthRatio = `${(run.x1 - run.x0) / ocr.page_width}`;
+    const fontPercent = Math.max(0.5, ((run.y1 - run.y0) / ocr.page_height) * 100 * 0.82);
+    span.style.fontSize = `${fontPercent}cqh`;
+    span.setAttribute("role", "presentation");
+    container.append(span);
+
+    const next = runs[index + 1];
+    if (!next) continue;
+    appendSelectableBreak(container);
+    if (next.block !== run.block) appendSelectableBreak(container);
+  }
+
+  const endOfContent = document.createElement("div");
+  endOfContent.className = "scan-text-end";
+  container.append(endOfContent);
+  bindSelectableTextLayer(container);
+
+  requestAnimationFrame(() => fitSelectableTextRuns(container));
+}
+
+function selectableTextRuns(items) {
+  const runs = [];
+  let current = null;
+  for (const item of items) {
+    if (!current || current.block !== item.block || current.line !== item.line) {
+      current = {
+        block: item.block,
+        line: item.line,
+        x0: item.x0,
+        y0: item.y0,
+        x1: item.x1,
+        y1: item.y1,
+        items: [],
+      };
+      runs.push(current);
+    }
+    current.items.push(item);
+    current.x0 = Math.min(current.x0, item.x0);
+    current.y0 = Math.min(current.y0, item.y0);
+    current.x1 = Math.max(current.x1, item.x1);
+    current.y1 = Math.max(current.y1, item.y1);
+  }
+  return runs;
+}
+
+function appendSelectableBreak(container) {
+  const br = document.createElement("br");
+  br.className = "scan-text-break";
+  br.setAttribute("role", "presentation");
+  container.append(br);
+}
+
+function bindSelectableTextLayer(container) {
+  container.addEventListener("pointerdown", () => {
+    container.classList.add("selecting");
+    const controller = new AbortController();
+    const finish = () => {
+      container.classList.remove("selecting");
+      controller.abort();
+    };
+    document.addEventListener("pointerup", finish, { signal: controller.signal });
+    window.addEventListener("blur", finish, { signal: controller.signal });
+    document.addEventListener(
+      "keyup",
+      (event) => {
+        if (event.key === "Escape") finish();
+      },
+      { signal: controller.signal },
+    );
+  });
+}
+
+function fitSelectableTextRuns(container) {
+  if (!container.isConnected) return;
+  for (const run of container.querySelectorAll(".scan-text-run")) {
+    const naturalWidth = run.offsetWidth;
+    const targetWidth = Number(run.dataset.targetWidthRatio) * container.clientWidth;
+    if (naturalWidth <= 0 || targetWidth <= 0) continue;
+    const scaleX = Math.max(0.05, Math.min(20, targetWidth / naturalWidth));
+    run.style.transform = `scaleX(${scaleX})`;
+  }
 }
 
 function renderLayoutItems(container, ocr) {
