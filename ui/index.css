@@ -172,53 +172,53 @@ input, select, textarea { background: var(--panel); color: var(--text); padding:
 .problem-page-button.active { background: var(--danger); border-color: var(--danger); }
 .page-pane { position: relative; min-width: 0; overflow: hidden; background: white; border: 1px solid var(--border); box-shadow: var(--shadow); }
 .page-placeholder { width: 100%; height: 100%; display: grid; place-items: center; color: #6b7280; background: #eceff2; min-height: 180px; }
-.page-pane img { display: block; width: 100%; height: 100%; object-fit: fill; }
+.page-pane img { display: block; width: 100%; height: 100%; object-fit: fill; user-select: none; -webkit-user-drag: none; }
 .ocr-layout, .scan-overlay, .scan-text-layer { position: absolute; inset: 0; overflow: hidden; container-type: size; }
 .ocr-word { position: absolute; white-space: nowrap; color: #111; transform-origin: left top; line-height: 1; }
 .scan-text-layer {
   z-index: 1;
-  cursor: text;
+  text-align: initial;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
   user-select: text;
   -webkit-user-select: text;
 }
-.scan-text-token {
+.scan-text-run,
+.scan-text-break {
   position: absolute;
-  overflow: visible;
-  color: transparent;
-  user-select: text;
-  -webkit-user-select: text;
-}
-.scan-text-word {
-  display: inline-block;
+  z-index: 1;
   white-space: pre;
   color: transparent;
-  -webkit-text-fill-color: transparent;
-  transform-origin: left top;
-  line-height: 1;
+  cursor: text;
+  transform-origin: 0 0;
   user-select: text;
   -webkit-user-select: text;
 }
-.scan-text-word::selection,
-.scan-text-separator::selection {
+.scan-text-run {
+  display: inline-block;
+  line-height: 1;
+  -webkit-text-fill-color: transparent;
+}
+.scan-text-layer ::selection {
   background: rgb(45 125 235 / 38%);
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
-.scan-text-separator {
+.scan-text-break::selection { background: transparent; }
+.scan-text-end {
+  display: block;
   position: absolute;
-  left: 100%;
-  top: 0;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  white-space: pre;
-  color: transparent;
-  font-size: 1px;
-  line-height: 1;
-  pointer-events: none;
-  user-select: text;
-  -webkit-user-select: text;
+  inset: 100% 0 0;
+  z-index: 0;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
 }
+.scan-text-layer.selecting .scan-text-end { top: 0; }
 .scan-overlay { z-index: 2; pointer-events: none; user-select: none; -webkit-user-select: none; display: none; }
 .scan-overlay.visible { display: block; }
 .scan-overlay .ocr-word { color: rgb(200 0 0 / 72%); outline: 1px solid rgb(220 0 0 / 28%); user-select: none; -webkit-user-select: none; }
