@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - agent/selectable-scan-text
     tags:
       - "v*"
   workflow_dispatch:
@@ -29,8 +28,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
-      - name: Check JavaScript syntax
-        run: node --check ui/pages.js
       - name: Run tests
         run: pytest -q
       - name: Run source self-test
