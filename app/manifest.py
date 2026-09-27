@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import tempfile
@@ -9,9 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from .models import VALID_FILE_STATUSES, VALID_OCR_MODES, ScannedPdf
+from .review import ISSUE_KINDS, file_sha256, repair_instructions, validate_issue
 
 MANIFEST_FILENAME = "pdf-ocr-reviewer.manifest.json"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class ManifestError(RuntimeError):
@@ -26,8 +28,18 @@ class ManifestWriteError(ManifestError):
     """Raised when an atomic manifest write fails."""
 
 
+def manifest_revision(folder: Path) -> str | None:
+    try:
+        return file_sha256(folder / MANIFEST_FILENAME)
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise ManifestError(f"Manifest cannot be read: {exc}") from exc
+
+
 def default_manifest() -> dict[str, Any]:
     return {
+        "repair_instructions": repair_instructions(),
         "schema_version": SCHEMA_VERSION,
         "application": "pdf-ocr-reviewer",
         "updated_at": None,
@@ -39,6 +51,7 @@ def default_manifest() -> dict[str, Any]:
             "status_filter": "all",
             "name_filter": "",
             "auto_advance": True,
+            "issue_kind": "position",
         },
         "files": {},
     }
@@ -57,7 +70,29 @@ def load_manifest(folder: Path) -> dict[str, Any]:
     except OSError as exc:
         raise ManifestError(f"Manifest cannot be read: {path}") from exc
 
+    data = migrate_manifest(data)
     validate_manifest(data)
+    return data
+
+
+def migrate_manifest(data: Any) -> Any:
+    if isinstance(data, dict) and data.get("schema_version") == 1:
+        data = copy.deepcopy(data)
+        data["schema_version"] = SCHEMA_VERSION
+        data.setdefault("repair_instructions", repair_instructions())
+        files = data.get("files")
+        if isinstance(files, dict):
+            for entry in files.values():
+                if isinstance(entry, dict):
+                    entry.setdefault("issues", [])
+    # Keep the stored kind key compatible; broaden only the old built-in wording.
+    if isinstance(data, dict):
+        instructions = data.get("repair_instructions")
+        kinds = instructions.get("kinds") if isinstance(instructions, dict) else None
+        if isinstance(kinds, dict) and kinds.get("oversized") == "Příliš velký box":
+            data = copy.deepcopy(data)
+            data["repair_instructions"]["kinds"]["oversized"] = "Špatná velikost boxu"
+            data["repair_instructions"].setdefault("kind_notes", repair_instructions()["kind_notes"])
     return data
 
 
@@ -70,6 +105,8 @@ def validate_manifest(data: Any) -> None:
         )
     if data.get("application") != "pdf-ocr-reviewer":
         raise ManifestFormatError("Manifest belongs to a different application.")
+    if not isinstance(data.get("repair_instructions"), dict):
+        raise ManifestFormatError("repair_instructions must be an object.")
 
     ui = data.get("ui")
     files = data.get("files")
@@ -83,6 +120,8 @@ def validate_manifest(data: Any) -> None:
         raise ManifestFormatError("ui.ocr_mode has an unsupported value.")
     if not isinstance(ui.get("overlay", True), bool):
         raise ManifestFormatError("ui.overlay must be a boolean.")
+    if not isinstance(ui.get("issue_kind", "position"), str) or ui.get("issue_kind", "position") not in ISSUE_KINDS:
+        raise ManifestFormatError("ui.issue_kind has an unsupported value.")
 
     for file_id, entry in files.items():
         if not isinstance(file_id, str) or not isinstance(entry, dict):
@@ -94,6 +133,18 @@ def validate_manifest(data: Any) -> None:
             for value in entry.get("problem_pages", [])
         ):
             raise ManifestFormatError(f"Invalid problem_pages for {file_id!r}.")
+        issues = entry.get("issues", [])
+        if not isinstance(issues, list):
+            raise ManifestFormatError(f"Invalid issues for {file_id!r}.")
+        try:
+            seen = set()
+            for issue in issues:
+                validate_issue(issue)
+                if issue["id"] in seen:
+                    raise ValueError("Duplicate issue ID.")
+                seen.add(issue["id"])
+        except ValueError as exc:
+            raise ManifestFormatError(f"Invalid issue in {file_id!r}: {exc}") from exc
 
 
 def ensure_file_entry(manifest: dict[str, Any], pdf: ScannedPdf) -> dict[str, Any]:
@@ -105,13 +156,15 @@ def ensure_file_entry(manifest: dict[str, Any], pdf: ScannedPdf) -> dict[str, An
     entry.setdefault("problem_pages", [])
     entry.setdefault("note", "")
     entry.setdefault("reviewed_at", None)
+    entry.setdefault("issues", [])
     return entry
 
 
-def save_manifest(folder: Path, manifest: dict[str, Any]) -> None:
+def save_manifest(folder: Path, manifest: dict[str, Any]) -> str:
     validate_manifest(manifest)
-    data = copy.deepcopy(manifest)
+    data = {"repair_instructions": copy.deepcopy(manifest["repair_instructions"]), **copy.deepcopy(manifest)}
     data["updated_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+    serialized = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     target = folder / MANIFEST_FILENAME
 
     temp_path: Path | None = None
@@ -126,8 +179,7 @@ def save_manifest(folder: Path, manifest: dict[str, Any]) -> None:
             delete=False,
         ) as handle:
             temp_path = Path(handle.name)
-            json.dump(data, handle, ensure_ascii=False, indent=2)
-            handle.write("\n")
+            handle.write(serialized)
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temp_path, target)
@@ -141,6 +193,7 @@ def save_manifest(folder: Path, manifest: dict[str, Any]) -> None:
         raise ManifestWriteError(f"Manifest cannot be written: {target}") from exc
 
     manifest["updated_at"] = data["updated_at"]
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def _fsync_directory(folder: Path) -> None:

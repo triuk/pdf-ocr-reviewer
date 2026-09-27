@@ -33,6 +33,16 @@ The **Overlay** switch displays semi-transparent OCR objects or their rectangles
 | `F` | fit to width |
 | `Ctrl+G` | go to a specified page |
 | `N` | open or focus the note |
+| `M` | toggle word/region marking; click a word or drag a rectangle |
+| `Esc` | return to text selection / cancel an active rectangle |
+| `J` / `K` | next / previous issue in the current filter (`]` / `[` also work) |
+| `C` | confirm the selected repaired issue and advance to the next repaired issue |
+| `R` | reopen the selected repaired/confirmed/cancelled issue |
+
+When an issue is selected, `N` focuses its note; otherwise it focuses the file note.
+Shortcuts do not intercept typing in inputs. Shift + drag marks an area over an
+existing issue. Marking also works in the right-hand Layout pane. Issue colors and
+labels are independent of the ordinary OCR overlay switch.
 
 After marking a file, automatic advancement to the next unreviewed file can be enabled in the settings.
 

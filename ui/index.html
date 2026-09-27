@@ -11,6 +11,7 @@
   <script src="files.js" defer></script>
   <script src="document.js" defer></script>
   <script src="pages.js" defer></script>
+  <script src="issues.js" defer></script>
   <script src="workflow.js" defer></script>
 </head>
 <body>
@@ -18,7 +19,7 @@
     <button id="selectFolderId" type="button">Open folder</button>
     <input id="folderPathId" type="text" spellcheck="false" placeholder="Path to folder with PDFs">
     <button id="openPathId" type="button" class="secondary">Load path</button>
-    <button id="refreshFolderId" type="button" class="secondary" title="Reload the PDF list">Refresh</button>
+    <button id="refreshFolderId" type="button" class="secondary" title="Znovu načíst manifest i PDF po externí opravě">Načíst opravy</button>
     <button id="exportCsvId" type="button" class="secondary">Export CSV</button>
     <span id="saveStateId" class="save-state">Manifest not open</span>
 
@@ -60,6 +61,19 @@
       </div>
       <div id="fileSummaryId" class="file-summary">No folder is open.</div>
       <div id="fileListId" class="file-list" role="listbox" aria-label="PDF files"></div>
+      <section id="issueSidebarId" class="issue-sidebar" aria-label="Připomínky dokumentu" hidden>
+        <div class="issue-list-heading"><strong>Připomínky</strong>
+          <select id="issueFilterId" aria-label="Filtrovat připomínky">
+            <option value="active">Otevřené a k ověření</option>
+            <option value="fixed">K ověření</option>
+            <option value="open">Otevřené</option>
+            <option value="all">Všechny</option>
+            <option value="dismissed">Zrušené</option>
+          </select>
+        </div>
+        <div id="issueSummaryId" class="issue-summary"></div>
+        <div id="issueListId" class="issue-list"></div>
+      </section>
     </aside>
 
     <section class="workspace">
@@ -76,6 +90,20 @@
         </div>
       </div>
 
+      <div class="issue-toolbar" aria-label="Označování OCR">
+        <button id="markIssueId" type="button" class="secondary" aria-pressed="false" title="M — zapnout/vypnout označování">Označovat · M</button>
+        <select id="issueKindId" aria-label="Typ nové připomínky" title="Použije se pro další označení">
+          <option value="position">Špatná poloha</option>
+          <option value="oversized">Špatná velikost boxu</option>
+          <option value="text">Chybný text</option>
+          <option value="missing">Chybějící text</option>
+          <option value="other">Jiný problém</option>
+        </select>
+        <button id="previousIssueId" class="secondary" type="button" title="K — předchozí připomínka">← K</button>
+        <button id="nextIssueId" class="secondary" type="button" title="J — další připomínka">Další · J →</button>
+        <span id="markHintId" class="mark-hint">M: označit slovo kliknutím nebo oblast tažením. Esc: čtení.</span>
+      </div>
+
       <div class="column-headings" aria-hidden="true">
         <span>Scan</span>
         <span>OCR layer</span>
@@ -89,8 +117,26 @@
       </div>
 
       <div class="note-panel">
-        <label for="fileNoteId">File note</label>
-        <textarea id="fileNoteId" rows="2" placeholder="The note is saved to the manifest."></textarea>
+        <div class="file-note"><label for="fileNoteId">File note</label>
+          <textarea id="fileNoteId" rows="2" placeholder="The note is saved to the manifest."></textarea>
+        </div>
+        <section id="issueEditorId" class="issue-editor" aria-label="Vybraná připomínka" hidden>
+          <div class="issue-editor-heading"><strong id="selectedIssueTitleId"></strong>
+            <span id="issueSaveId" role="status"></span>
+            <button id="closeIssueId" type="button" class="secondary" title="Zavřít detail">×</button>
+          </div>
+          <div class="issue-editor-fields">
+            <select id="selectedIssueKindId" aria-label="Typ vybrané připomínky"></select>
+            <textarea id="issueNoteId" rows="2" placeholder="Volitelná poznámka · ukládá se automaticky" aria-label="Poznámka k místu"></textarea>
+          </div>
+          <div id="issueResultId" class="issue-result"></div>
+          <div class="issue-actions">
+            <button id="verifyIssueId" type="button" title="C — potvrdit a přejít na další">Potvrdit a další · C</button>
+            <button id="reopenIssueId" type="button" class="secondary" title="R — znovu otevřít připomínku">Vrátit k opravě · R</button>
+            <button id="dismissIssueId" type="button" class="secondary">Zrušit označení</button>
+            <button id="retryIssueSaveId" type="button" class="secondary" hidden>Uložit poznámku</button>
+          </div>
+        </section>
       </div>
     </section>
   </main>

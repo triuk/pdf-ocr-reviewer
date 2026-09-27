@@ -1,5 +1,10 @@
 # Implementation plan and work status
 
+Current extension (2026-09-25): word/region review and external repair handoff are
+implemented; see [the schema-2 repair contract](region-review.md). The phase lists
+below retain the original prototype plan. Current verification is recorded in
+section 17.
+
 ## 8. Loading, virtualization, and memory
 
 ### Principles
@@ -69,7 +74,7 @@ File name:
 pdf-ocr-reviewer.manifest.json
 ```
 
-### Proposed schema version 1
+### Original schema version 1 (automatically migrated to version 2)
 
 ```json
 {
@@ -106,7 +111,8 @@ pdf-ocr-reviewer.manifest.json
 - the file key is the relative name with respect to the selected folder;
 - page numbers are stored in the manifest as zero-based indexes, while the UI displays them starting at one;
 - `size` and `mtime_ns` are used to detect PDF changes;
-- OCR text, previews, and coordinates are not stored in the manifest;
+- schema 2 stores coordinates and OCR snapshots only for manually marked regions;
+  raster previews and the full document OCR are not stored;
 - unknown manifest entries must not be silently discarded during loading;
 - an invalid status or schema produces a visible error rather than a silent reset;
 - a new schema version must have an explicit migration function.
@@ -342,7 +348,7 @@ The first version is complete when:
 - OCR recognition of new documents;
 - comparison of two PDF versions;
 - automatic linguistic evaluation of OCR correctness;
-- per-word annotations;
+- per-word annotations were added in the 2026-09-25 region-review extension;
 - multiple simultaneously connected clients;
 - network or cloud mode;
 - recursive traversal of subfolders;
@@ -368,21 +374,23 @@ After each completed unit of work, this README must be updated:
 ### Current work status
 
 ```text
-Phase: 3 – integration and manual verification
-Completed: project skeleton, PDF backend, folder scan, manifest, binary packet, WebUI UI, OCR modes, lazy loading prototype, CSV export, read-only viewing fallback, 10 automated tests
-In progress: verification of the actual WebUI browser transport and native folder dialog
-Next action: install webui2 in a normal environment and run a smoke test with a real OCR PDF
-Blocking issue: webui2 is not available in the restricted package index used during this implementation session
-Known limitation: rendering is serialized inside callbacks; render_worker.py is not implemented yet
-Known limitation: platform acceptance tests and the asynchronous render worker are not implemented
-Last verified reference commit: 538123e061622a702709a1dd9c5a22cd32592dd3
-Last verified UI commit: 72070fe146df89d3e0a6325a0475783bfda6d40d
+Phase: region review and external repair handoff implemented
+Completed: schema-2 instructions and migration; word/region marks; OCR snapshots and SHA-256 anchors; QA companion references; issue notes, history, filters, counts and colors; confirm/advance, reopen and cancel; external manifest conflict detection and reload
+Verified: automated backend tests and real WebUI/Chromium smoke workflow on a temporary copy of the supplied four-page OCR PDF
+Next action: use the workflow for a real external repair batch and review the returned marks
+Known limitation: no OCR repair engine inside the reviewer; repairs are performed by the separately instructed external tool
+Known limitation: concurrent writes are detected optimistically; close the reviewer during repair batches when possible
+Known limitation: stale regions must be marked again; no automatic relocation across changed PDFs
+Known limitation: Windows acceptance and long-document performance remain unverified; rendering remains serialized
 ```
 
 ### Decision log
 
 | Date | Decision | Reason |
 |---|---|---|
+| 2026-09-25 | Schema 2 embeds repair instructions and region issues in the existing manifest | A short range-based prompt can drive targeted external repairs without an export step |
+| 2026-09-25 | Reopen only changes the issue status; fixed awaits human verification | User explicitly requested reopening a comment, not rolling back PDF content |
+| 2026-09-25 | Mark immediately with the remembered kind and review via J/K/C/R | Avoid repeated dialogs and unnecessary clicks |
 | 2026-08-04 | Use WebUI instead of PySide6 | The user selected WebUI and supplied a reference project |
 | 2026-08-04 | Use a JSON manifest instead of SQLite | The state is small and local |
 | 2026-08-04 | One shared scroll for scan and OCR | Guarantees permanent vertical alignment |
@@ -401,6 +409,8 @@ Last verified UI commit: 72070fe146df89d3e0a6325a0475783bfda6d40d
 
 | Date | Work performed | Result |
 |---|---|---|
+| 2026-09-25 | Generalized the box-size issue label and added an on-box cancel button | Covers undersized boxes and allows one-click cancellation in reading or marking mode |
+| 2026-09-25 | Added region review, schema migration, repair contract, revision guards, colors and keyboard workflow | Backend tests and real WebUI browser smoke pass; original PDF unchanged |
 | 2026-08-04 | Inspected the supplied ZIP, main Python backend, HTML, JavaScript, CSS, and Git metadata | Identified elements reusable for `pdf-ocr-reviewer` |
 | 2026-08-04 | Created the implementation plan | Awaiting user approval |
 | 2026-08-04 | Adjusted the plan: name, plain CSS, removal of server mode, and backend dialog choice | README matches the current decisions |

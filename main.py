@@ -69,6 +69,7 @@ def run_self_test() -> int:
         "files.js",
         "document.js",
         "pages.js",
+        "issues.js",
         "workflow.js",
     )
     checks.append(

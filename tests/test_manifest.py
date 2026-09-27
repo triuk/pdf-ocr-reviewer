@@ -16,7 +16,7 @@ from app.manifest import (
 
 def test_missing_manifest_returns_defaults(tmp_path: Path) -> None:
     manifest = load_manifest(tmp_path)
-    assert manifest["schema_version"] == 1
+    assert manifest["schema_version"] == 2
     assert manifest["files"] == {}
     assert manifest["ui"]["ocr_mode"] == "pdf_order"
     assert manifest["ui"]["overlay"] is True
@@ -55,3 +55,23 @@ def test_invalid_status_is_rejected(tmp_path: Path) -> None:
     (tmp_path / MANIFEST_FILENAME).write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ManifestFormatError):
         load_manifest(tmp_path)
+
+
+def test_v1_migration_preserves_all_review_data_and_unknown_fields(tmp_path: Path) -> None:
+    original = default_manifest()
+    original.pop("repair_instructions")
+    original["schema_version"] = 1
+    original["future"] = {"preserve": True}
+    original["ui"]["last_file"] = "a.pdf"
+    original["files"]["a.pdf"] = {"status": "error", "note": "Ruční poznámka", "problem_pages": [1], "future": 42}
+    path = tmp_path / MANIFEST_FILENAME
+    path.write_text(json.dumps(original), encoding="utf-8")
+    migrated = load_manifest(tmp_path)
+    assert migrated["schema_version"] == 2
+    assert migrated["files"]["a.pdf"] == {**original["files"]["a.pdf"], "issues": []}
+    assert migrated["ui"] == original["ui"]
+    assert migrated["future"] == original["future"]
+    assert json.loads(path.read_text())["schema_version"] == 1  # read-only until save
+    save_manifest(tmp_path, migrated)
+    assert next(iter(json.loads(path.read_text()))) == "repair_instructions"
+    assert load_manifest(tmp_path) == migrated

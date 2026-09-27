@@ -5,6 +5,7 @@ import csv
 import io
 import json
 import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -15,11 +16,13 @@ from .manifest import (
     ManifestError,
     ensure_file_entry,
     load_manifest,
+    manifest_revision,
     save_manifest,
 )
-from .models import VALID_FILE_STATUSES, VALID_OCR_MODES, ScannedPdf
+from .models import VALID_FILE_STATUSES, VALID_OCR_MODES, FileIdentity, ScannedPdf
 from .pdf_document import PdfDocument, PdfDocumentError
 from .raw_packet import pack_raw_packet
+from .review import ISSUE_KINDS, companion_resources, file_sha256, issue_counts, validate_issue
 
 
 class BackendApi:
@@ -32,6 +35,8 @@ class BackendApi:
         self.active_document: PdfDocument | None = None
         self.startup_error: dict[str, str] | None = None
         self.persistence_error: dict[str, str] | None = None
+        self._manifest_revision: str | None = None
+        self._document_sha256: str | None = None
         if initial_folder is not None:
             try:
                 self.open_folder(initial_folder)
@@ -60,6 +65,8 @@ class BackendApi:
         window.bind("setFileNoteB", self.set_file_note_callback)
         window.bind("setUiOptionsB", self.set_ui_options_callback)
         window.bind("exportCsvB", self.export_csv_callback)
+        window.bind("addIssueB", self.add_issue_callback)
+        window.bind("updateIssueB", self.update_issue_callback)
 
     def sync_state_callback(self, event: Any) -> None:
         event.return_string(self._ok(self.public_state()))
@@ -95,7 +102,7 @@ class BackendApi:
     def open_document_callback(self, event: Any) -> None:
         try:
             event.return_string(self._ok(self.open_document(event.get_string())))
-        except (PdfDocumentError, KeyError, ManifestError, ValueError) as exc:
+        except (PdfDocumentError, KeyError, ManifestError, ValueError, OSError) as exc:
             event.return_string(self._error("PDF_OPEN_FAILED", str(exc)))
 
     def request_page_callback(self, event: Any) -> None:
@@ -110,7 +117,7 @@ class BackendApi:
             else:
                 event.window.send_raw("pageReadyF", packet)
             event.return_string(self._ok({"request_id": request_id, "queued": False}))
-        except (PdfDocumentError, KeyError, ValueError, ManifestError) as exc:
+        except (PdfDocumentError, KeyError, ValueError, ManifestError, OSError) as exc:
             event.return_string(self._error("PAGE_RENDER_FAILED", str(exc)))
 
     def set_file_status_callback(self, event: Any) -> None:
@@ -158,11 +165,27 @@ class BackendApi:
         except (ValueError, ManifestError) as exc:
             event.return_string(self._error("CSV_EXPORT_FAILED", str(exc)))
 
+    def add_issue_callback(self, event: Any) -> None:
+        try:
+            event.return_string(self._ok(self.add_issue(event.get_string_at(0), json.loads(event.get_string_at(1)))))
+        except (KeyError, ValueError, ManifestError, PdfDocumentError, OSError) as exc:
+            event.return_string(self._error("ISSUE_SAVE_FAILED", str(exc)))
+
+    def update_issue_callback(self, event: Any) -> None:
+        try:
+            event.return_string(self._ok(self.update_issue(
+                event.get_string_at(0), event.get_string_at(1), json.loads(event.get_string_at(2)))))
+        except (KeyError, ValueError, ManifestError, PdfDocumentError, OSError) as exc:
+            event.return_string(self._error("ISSUE_SAVE_FAILED", str(exc)))
+
     def open_folder(self, folder: Path) -> dict[str, Any]:
         with self._lock:
             resolved = folder.expanduser().resolve()
             scanned = scan_pdf_folder(resolved)
+            revision = manifest_revision(resolved)
             manifest = load_manifest(resolved)
+            if manifest_revision(resolved) != revision:
+                raise ManifestError("Manifest se během načítání změnil. Zkuste Načíst opravy znovu.")
             for pdf in scanned:
                 ensure_file_entry(manifest, pdf)
 
@@ -170,6 +193,7 @@ class BackendApi:
             self.current_folder = resolved
             self.files = {item.file_id: item for item in scanned}
             self.manifest = manifest
+            self._manifest_revision = revision
             self.active_file_id = None
             self.startup_error = None
             self.persistence_error = None
@@ -178,15 +202,27 @@ class BackendApi:
     def open_document(self, file_id: str) -> dict[str, Any]:
         with self._lock:
             pdf = self._require_file(file_id)
-            if self.active_file_id != file_id:
+            stat = pdf.path.stat()
+            identity = FileIdentity(stat.st_size, stat.st_mtime_ns)
+            if self.active_file_id != file_id or identity != pdf.identity or self.active_document is None:
                 self.close()
+                self.active_file_id = None
+                self._document_sha256 = file_sha256(pdf.path)
                 self.active_document = PdfDocument(pdf.path)
+                after = pdf.path.stat()
+                if (after.st_size, after.st_mtime_ns) != (identity.size, identity.mtime_ns):
+                    self.close()
+                    raise PdfDocumentError("PDF se během načítání změnilo. Načtěte opravy znovu.")
+                pdf = ScannedPdf(file_id, pdf.name, pdf.path, identity)
+                self.files[file_id] = pdf
                 self.active_file_id = file_id
             assert self.active_document is not None
             entry = self._entry(file_id)
             assert self.manifest is not None
             previous_last_file = self.manifest["ui"].get("last_file")
             self.manifest["ui"]["last_file"] = file_id
+            entry["ocr_sha256"] = self._document_sha256
+            entry["resources"] = {**entry.get("resources", {}), **companion_resources(pdf.path)}
             try:
                 self._save_manifest()
             except ManifestError as exc:
@@ -202,7 +238,89 @@ class BackendApi:
                 "problem_pages": entry.get("problem_pages", []),
                 "note": entry.get("note", ""),
                 "persistence_error": self.persistence_error,
+                **self._issue_state(file_id),
             }
+
+    def _issue_state(self, file_id: str) -> dict[str, Any]:
+        entry = self._entry(file_id)
+        issues = copy.deepcopy(entry["issues"])
+        for issue in issues:
+            issue["stale"] = issue["target_sha256"] != self._document_sha256
+        return {"issues": issues, "issue_counts": issue_counts(issues), "ocr_sha256": self._document_sha256}
+
+    def _check_issue_document(self, file_id: str, expected_sha256: str) -> None:
+        pdf = self._require_file(file_id)
+        if self.active_file_id != file_id or self.active_document is None:
+            raise ValueError("Dokument už není otevřený. Načtěte jej znovu.")
+        if expected_sha256 != self._document_sha256 or file_sha256(pdf.path) != self._document_sha256:
+            raise ValueError("PDF se změnilo. Nejdříve použijte Načíst opravy.")
+
+    def _commit_issue(self, snapshot: dict[str, Any]) -> None:
+        try:
+            self._save_manifest()
+        except ManifestError as exc:
+            self.manifest = snapshot
+            self._set_persistence_error(exc)
+            raise
+
+    def add_issue(self, file_id: str, data: Any) -> dict[str, Any]:
+        with self._lock:
+            if not isinstance(data, dict) or not isinstance(data.get("kind"), str) or data["kind"] not in ISSUE_KINDS:
+                raise ValueError("Invalid issue kind.")
+            self._check_issue_document(file_id, data.get("expected_sha256"))
+            assert self.active_document is not None
+            region = self.active_document.region_snapshot(data.get("page_index"), data.get("bbox"))
+            now = datetime.now().astimezone().isoformat(timespec="seconds")
+            issue = {
+                "id": str(uuid.uuid4()), **region, "kind": data["kind"],
+                "note": data.get("note", ""), "status": "open",
+                "source_sha256": self._document_sha256, "target_sha256": self._document_sha256,
+                "created_at": now, "updated_at": now,
+                "history": [{"at": now, "action": "created", "to": "open"}],
+            }
+            validate_issue(issue)
+            snapshot = copy.deepcopy(self._require_manifest())
+            entry = self._entry(file_id)
+            entry["issues"].append(issue)
+            self._commit_issue(snapshot)
+            return {"file_id": file_id, "issue_id": issue["id"], **self._issue_state(file_id)}
+
+    def update_issue(self, file_id: str, issue_id: str, patch: Any) -> dict[str, Any]:
+        with self._lock:
+            if not isinstance(patch, dict) or set(patch) - {"status", "kind", "note", "expected_sha256"}:
+                raise ValueError("Invalid issue update.")
+            self._check_issue_document(file_id, patch.get("expected_sha256"))
+            entry = self._entry(file_id)
+            index = next((i for i, issue in enumerate(entry["issues"]) if issue["id"] == issue_id), None)
+            if index is None:
+                raise ValueError("Připomínka neexistuje.")
+            previous = entry["issues"][index]
+            issue = copy.deepcopy(previous)
+            status = patch.get("status", issue["status"])
+            if not isinstance(status, str):
+                raise ValueError("Invalid issue status.")
+            if status not in {"open", "verified", "dismissed"} and status != issue["status"]:
+                raise ValueError("Status fixed může zapsat pouze opravný postup s výsledkem opravy.")
+            if status == "verified" and issue["status"] not in {"fixed", "verified"}:
+                raise ValueError("Potvrdit lze pouze opravenou připomínku.")
+            if status == "verified" and issue["target_sha256"] != self._document_sha256:
+                raise ValueError("Připomínka patří k jiné verzi PDF. Nelze ji potvrdit.")
+            now = datetime.now().astimezone().isoformat(timespec="seconds")
+            changes = {key: value for key, value in patch.items() if key != "expected_sha256" and value != issue.get(key)}
+            if not changes:
+                return {"file_id": file_id, "issue_id": issue_id, **self._issue_state(file_id)}
+            issue.update(changes)
+            issue["updated_at"] = now
+            issue["history"].append({
+                "at": now, "action": "status_changed" if "status" in changes else "edited",
+                "from": previous["status"], "to": status,
+                "previous": {key: previous.get(key) for key in changes}, "changes": changes,
+            })
+            validate_issue(issue)
+            snapshot = copy.deepcopy(self._require_manifest())
+            entry["issues"][index] = issue
+            self._commit_issue(snapshot)
+            return {"file_id": file_id, "issue_id": issue_id, **self._issue_state(file_id)}
 
     def render_page_packet(
         self,
@@ -212,7 +330,9 @@ class BackendApi:
         target_width: int,
     ) -> bytes:
         with self._lock:
-            if self.active_document is None or self.active_file_id != file_id:
+            if self.active_document is not None and self.active_file_id != file_id:
+                raise PdfDocumentError("Obsolete page request for a document that is no longer active.")
+            if self.active_document is None:
                 self.open_document(file_id)
             assert self.active_document is not None
             rendered = self.active_document.render_page(page_index, target_width)
@@ -306,6 +426,10 @@ class BackendApi:
                 raise ValueError("UI options must be an object.")
             manifest = self._require_manifest()
             ui = manifest["ui"]
+            if "issue_kind" in options:
+                if not isinstance(options["issue_kind"], str) or options["issue_kind"] not in ISSUE_KINDS:
+                    raise ValueError("Invalid issue kind.")
+                ui["issue_kind"] = options["issue_kind"]
             if "zoom_percent" in options:
                 zoom = int(options["zoom_percent"])
                 if not 25 <= zoom <= 400:
@@ -410,7 +534,9 @@ class BackendApi:
     def _save_manifest(self) -> None:
         manifest = self._require_manifest()
         assert self.current_folder is not None
-        save_manifest(self.current_folder, manifest)
+        if manifest_revision(self.current_folder) != self._manifest_revision:
+            raise ManifestError("Manifest změnil jiný nástroj. Použijte Načíst opravy; novější data nebyla přepsána.")
+        self._manifest_revision = save_manifest(self.current_folder, manifest)
         self.persistence_error = None
 
     def _set_persistence_error(self, exc: Exception) -> None:

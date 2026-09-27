@@ -1,12 +1,16 @@
-async function openDocumentF(fileId) {
+async function openDocumentF(fileId, afterReload = false) {
   try {
-    state.generation += 1;
+    if (!await flushIssueDraft()) return;
+    if (!afterReload && !await flushFileNote()) return;
+    const generation = ++state.generation;
     releasePageResources();
     elements.pageScrollId.scrollTop = 0;
 
     const documentData = await callBackend("openDocumentB", fileId);
+    if (generation !== state.generation) return;
     state.activeFileId = fileId;
     state.document = documentData;
+    state.selectedIssueId = null;
     if (documentData.persistence_error) setSaveState(documentData.persistence_error.message, true);
     else setSaveState("Manifest is writable", false);
     state.pageData.clear();
@@ -14,10 +18,16 @@ async function openDocumentF(fileId) {
     renderDocumentShell();
     setActiveStatus(documentData.status);
     elements.fileNoteId.value = documentData.note || "";
+    if (state.fileNoteDraft?.fileId === fileId && state.fileNoteDraft.folder === state.folder) {
+      elements.fileNoteId.value = state.fileNoteDraft.note;
+      setSaveState("Poznámka souboru není uložena; zůstala v editoru", true);
+    }
+    const file = state.files.find((item) => item.file_id === fileId);
+    if (file) file.issue_counts = documentData.issue_counts;
+    refreshIssueViews();
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => scrollToSavedPage(documentData.last_page || 0));
-    });
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    if (generation === state.generation) scrollToSavedPage(documentData.last_page || 0);
   } catch (error) {
     showToast(error.message, true);
   }
@@ -27,12 +37,14 @@ function clearDocument() {
   releasePageResources();
   state.activeFileId = null;
   state.document = null;
+  state.selectedIssueId = null;
   elements.documentNameId.textContent = "Select a PDF";
   elements.documentMetaId.textContent = "";
   elements.pagesId.replaceChildren();
   elements.emptyStateId.hidden = false;
   elements.fileNoteId.value = "";
   elements.pageScrollId.scrollTop = 0;
+  refreshIssueViews();
 }
 
 function renderDocumentShell() {

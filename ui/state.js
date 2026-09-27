@@ -11,6 +11,7 @@ const state = {
     status_filter: "all",
     name_filter: "",
     auto_advance: true,
+    issue_kind: "position",
   },
   activeFileId: null,
   document: null,
@@ -23,6 +24,16 @@ const state = {
   visiblePages: new Set(),
   savePositionTimer: null,
   saveNoteTimer: null,
+  fileNoteDraft: null,
+  fileNoteQueue: Promise.resolve(),
+  marking: false,
+  issueKind: "position",
+  selectedIssueId: null,
+  issueFilter: "active",
+  issueDrafts: new Map(),
+  issueSaveTimer: null,
+  issueQueue: Promise.resolve(),
+  issueBusy: false,
 };
 
 const elements = {};
@@ -34,6 +45,11 @@ function bindElements() {
     "statusFilterId", "fileSummaryId", "fileListId", "documentNameId",
     "documentMetaId", "pageScrollId", "emptyStateId", "pagesId",
     "fileNoteId", "toastId",
+    "issueSidebarId", "issueFilterId", "issueSummaryId", "issueListId",
+    "markIssueId", "issueKindId", "previousIssueId", "nextIssueId", "markHintId",
+    "issueEditorId", "selectedIssueTitleId", "selectedIssueKindId", "issueNoteId",
+    "issueResultId", "verifyIssueId", "reopenIssueId", "dismissIssueId", "closeIssueId",
+    "issueSaveId", "retryIssueSaveId",
   ];
   for (const id of ids) elements[id] = document.getElementById(id);
 }
@@ -94,6 +110,8 @@ function applyPublicState(data) {
     applyZoom(false);
     elements.nameFilterId.value = state.ui.name_filter || "";
     elements.statusFilterId.value = state.ui.status_filter || "all";
+    state.issueKind = state.ui.issue_kind || "position";
+    elements.issueKindId.value = state.issueKind;
     renderFileList();
   } finally {
     state.applyingState = false;

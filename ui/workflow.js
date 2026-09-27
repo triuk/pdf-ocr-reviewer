@@ -81,12 +81,25 @@ function scheduleSaveCurrentPage() {
 function scheduleSaveNote() {
   if (!state.activeFileId) return;
   window.clearTimeout(state.saveNoteTimer);
-  const fileId = state.activeFileId;
-  const note = elements.fileNoteId.value;
-  state.saveNoteTimer = window.setTimeout(async () => {
-    try { await callBackend("setFileNoteB", fileId, note); }
-    catch (error) { showToast(error.message, true); }
-  }, 500);
+  state.fileNoteDraft = { folder: state.folder, fileId: state.activeFileId, note: elements.fileNoteId.value };
+  state.saveNoteTimer = window.setTimeout(flushFileNote, 500);
+}
+
+function flushFileNote() {
+  window.clearTimeout(state.saveNoteTimer);
+  const job = state.fileNoteQueue.then(async () => {
+    const draft = state.fileNoteDraft;
+    if (!draft) return true;
+    if (draft.folder !== state.folder) return false;
+    try {
+      await callBackend("setFileNoteB", draft.fileId, draft.note);
+      if (state.fileNoteDraft === draft) state.fileNoteDraft = null;
+      setSaveState("Manifest uložen", false);
+      return true;
+    } catch (error) { showToast(error.message, true); return false; }
+  });
+  state.fileNoteQueue = job.catch(() => false);
+  return job;
 }
 
 async function saveUiOptions(patch) {
@@ -156,7 +169,13 @@ function movePage(direction) {
 
 function handleKeyboard(event) {
   const target = event.target;
+  if (event.key === "Escape") {
+    setMarking(false);
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) target.blur();
+    return;
+  }
   if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+  if (handleIssueKeyboard(event)) return;
   if (event.key === "ArrowDown") { event.preventDefault(); moveDocument(1); }
   else if (event.key === "ArrowUp") { event.preventDefault(); moveDocument(-1); }
   else if (event.key === "PageDown") { event.preventDefault(); movePage(1); }
@@ -214,6 +233,7 @@ function attachEvents() {
 document.addEventListener("DOMContentLoaded", () => {
   bindElements();
   attachEvents();
+  attachIssueEvents();
   if (typeof webui === "undefined") {
     showToast("The webui.js file was not loaded.", true);
     return;

@@ -7,6 +7,7 @@ from typing import Any
 import pymupdf
 
 from .models import PageMetadata
+from .review import COORDINATE_SYSTEM, validate_bbox
 
 
 class PdfDocumentError(RuntimeError):
@@ -73,7 +74,7 @@ class PdfDocument:
             scale = target_width / rect.width
             pixmap = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False)
             image_bytes = pixmap.tobytes("png")
-            words = page.get_text("words", sort=False)
+            layout_items = self._layout_items(page)
             pdf_order = page.get_text("text", sort=False)
             geometric_order = page.get_text("text", sort=True)
         except Exception as exc:
@@ -81,25 +82,14 @@ class PdfDocument:
                 f"Page {page_index + 1} cannot be rendered: {self.path.name}"
             ) from exc
 
-        layout_items = [
-            {
-                "x0": float(word[0]),
-                "y0": float(word[1]),
-                "x1": float(word[2]),
-                "y1": float(word[3]),
-                "text": str(word[4]),
-                "block": int(word[5]),
-                "line": int(word[6]),
-                "word": int(word[7]),
-            }
-            for word in words
-        ]
         ocr = {
             "page_width": float(rect.width),
             "page_height": float(rect.height),
             "layout_items": layout_items,
             "pdf_order": pdf_order,
             "geometric_order": geometric_order,
+            "rotation": page.rotation,
+            "coordinate_system": COORDINATE_SYSTEM,
         }
         return RenderedPage(
             page_index=page_index,
@@ -109,3 +99,32 @@ class PdfDocument:
             mime_type="image/png",
             ocr=ocr,
         )
+
+    @staticmethod
+    def _layout_items(page: Any) -> list[dict[str, Any]]:
+        items = []
+        for word in page.get_text("words", sort=False):
+            rect = pymupdf.Rect(word[:4]) * page.rotation_matrix
+            items.append({
+                "x0": float(rect.x0), "y0": float(rect.y0),
+                "x1": float(rect.x1), "y1": float(rect.y1),
+                "text": str(word[4]), "block": int(word[5]),
+                "line": int(word[6]), "word": int(word[7]),
+            })
+        return items
+
+    def region_snapshot(self, page_index: int, bbox: list[float]) -> dict[str, Any]:
+        if type(page_index) is not int or not 0 <= page_index < self.page_count:
+            raise ValueError("Invalid page index.")
+        page = self._document.load_page(page_index)
+        validate_bbox(bbox, page.rect.width, page.rect.height)
+        x0, y0, x1, y1 = bbox
+        targets = [item for item in self._layout_items(page)
+                   if item["x0"] < x1 and item["x1"] > x0
+                   and item["y0"] < y1 and item["y1"] > y0]
+        return {
+            "page_index": page_index, "bbox": bbox,
+            "page_width": page.rect.width, "page_height": page.rect.height,
+            "page_rotation": page.rotation, "coordinate_system": COORDINATE_SYSTEM,
+            "targets": targets, "text": " ".join(item["text"] for item in targets),
+        }

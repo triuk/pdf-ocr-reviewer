@@ -4,6 +4,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Final, Literal
 
+from .review import issue_counts
+
 FileStatus = Literal["unreviewed", "ok", "error", "needs_review"]
 OcrMode = Literal["layout", "pdf_order", "geometric_order"]
 
@@ -45,6 +47,7 @@ class ScannedPdf:
             "last_page": entry.get("last_page", 0),
             "problem_page_count": len(problem_pages) if isinstance(problem_pages, list) else 0,
             "changed_since_review": changed,
+            "issue_counts": issue_counts(entry.get("issues", [])),
         }
 
 

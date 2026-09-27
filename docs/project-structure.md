@@ -17,18 +17,26 @@ pdf-ocr-reviewer/
 │   ├── folder_dialog.py
 │   ├── folder_scanner.py
 │   ├── manifest.py
+│   ├── review.py
 │   ├── pdf_document.py
 │   ├── render_worker.py
 │   └── raw_packet.py
 ├── ui/
-│   ├── favicon.ico
+│   ├── favicon.svg
 │   ├── index.html
-│   ├── index.js
+│   ├── state.js
+│   ├── files.js
+│   ├── document.js
+│   ├── pages.js
+│   ├── issues.js
+│   ├── workflow.js
 │   └── index.css
 ├── tools/
-│   └── benchmark_page.py
+│   ├── benchmark_page.py
+│   └── smoke_region_review.py
 ├── tests/
 │   ├── test_manifest.py
+│   ├── test_region_review.py
 │   ├── test_folder_scanner.py
 │   ├── test_raw_packet.py
 │   └── test_pdf_document.py
@@ -45,6 +53,8 @@ pdf-ocr-reviewer/
 - `folder_dialog.py` – folder selection and its fallback solution;
 - `folder_scanner.py` – safe PDF listing and file identities;
 - `manifest.py` – JSON loading, migration, validation, and safe writing;
+- `review.py` – repair instructions, issue validation, hashes and companion file discovery;
+- `ui/issues.js` – marking, issue overlays, autosave, review navigation and status actions;
 - `pdf_document.py` – PDF metadata and OCR extraction;
 - `render_worker.py` – render request queue;
 - `raw_packet.py` – packing and unpacking binary messages for the frontend.

@@ -34,6 +34,19 @@ function renderFileList() {
     if (file.changed_since_review) meta.classList.add("file-changed");
 
     button.append(status, name, meta);
+    const counts = file.issue_counts || {};
+    if (counts.open || counts.fixed || counts.verified) {
+      const summary = document.createElement("span");
+      summary.className = "file-issue-summary";
+      for (const [key, label] of [["open", "otevř."], ["fixed", "k ověření"], ["verified", "potvrz."]]) {
+        if (!counts[key]) continue;
+        const part = document.createElement("span");
+        part.className = `issue-${key}`;
+        part.textContent = `${issueSymbols[key]} ${counts[key]} ${label}`;
+        summary.append(part);
+      }
+      button.append(summary);
+    }
     button.addEventListener("click", () => openDocumentF(file.file_id));
     elements.fileListId.append(button);
   }
@@ -89,6 +102,8 @@ async function exportCsvF() {
 
 async function selectFolderF() {
   try {
+    if (!await flushIssueDraft()) return;
+    if (!await flushFileNote()) return;
     const data = await callBackend("selectFolderB");
     if (!data.cancelled) {
       applyPublicState(data);
@@ -103,6 +118,8 @@ async function openPathF() {
   const path = elements.folderPathId.value.trim();
   if (!path) return;
   try {
+    if (!await flushIssueDraft()) return;
+    if (!await flushFileNote()) return;
     const data = await callBackend("openFolderB", path);
     applyPublicState(data);
     await openInitialDocumentAfterFolder();
@@ -113,8 +130,25 @@ async function openPathF() {
 
 async function refreshFolderF() {
   try {
+    const fileId = state.activeFileId;
+    const issueId = state.selectedIssueId;
+    const pageIndex = getCurrentPageIndex();
+    await flushIssueDraft(); // Failed drafts stay in memory; reloading must remain possible after a conflict.
+    await flushFileNote();
+    await state.issueQueue;
+    window.clearTimeout(state.saveNoteTimer);
+    window.clearTimeout(state.savePositionTimer);
     const data = await callBackend("refreshFolderB");
+    state.selectedIssueId = null;
     applyPublicState(data);
+    if (fileId && state.files.some((file) => file.file_id === fileId)) {
+      await openDocumentF(fileId, true);
+      scrollToSavedPage(pageIndex);
+      if (state.document?.issues.some((issue) => issue.id === issueId)) await selectIssue(issueId);
+    } else {
+      await openInitialDocumentAfterFolder();
+    }
+    showToast("Manifest i PDF znovu načteny.");
   } catch (error) {
     showToast(error.message, true);
   }
