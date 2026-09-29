@@ -13,7 +13,7 @@ from typing import Any
 
 from .file_lock import file_lock
 from .models import VALID_FILE_STATUSES, VALID_OCR_MODES, ScannedPdf
-from .review import ISSUE_KINDS, file_sha256, repair_instructions, validate_issue, valid_hash
+from .review import ISSUE_KINDS, file_sha256, repair_instructions, migrate_repair_instructions, validate_issue, valid_hash
 
 MANIFEST_FILENAME = "pdf-ocr-reviewer.manifest.json"
 SCHEMA_VERSION = 2
@@ -99,11 +99,9 @@ def migrate_manifest(data: Any) -> Any:
             data["repair_instructions"].setdefault("kind_notes", repair_instructions()["kind_notes"])
     if isinstance(data, dict) and isinstance(data.get("repair_instructions"), dict):
         instructions = data["repair_instructions"]
-        if instructions.get("version") == 1 and "writer_protocol" not in instructions:
+        if instructions.get("version") in (1, 2):
             data = copy.deepcopy(data)
-            data["repair_instructions"]["writer_protocol"] = repair_instructions()["writer_protocol"]
-            data["repair_instructions"]["version"] = 2
-            # Keep all original/custom rules; the new protocol refines atomic writes.
+            data["repair_instructions"] = migrate_repair_instructions(instructions)
     return data
 
 
@@ -138,7 +136,7 @@ def validate_manifest(data: Any) -> None:
     field(ui.get("ocr_mode", "pdf_order"), lambda v: choice(v, VALID_OCR_MODES), "ui.ocr_mode")
     field(ui.get("issue_kind", "position"), lambda v: choice(v, ISSUE_KINDS), "ui.issue_kind")
     field(ui.get("status_filter", "all"), lambda v: choice(v, {*VALID_FILE_STATUSES, "all"}), "ui.status_filter")
-    field(ui.get("issue_filter", "all"), lambda v: choice(v, {"all", "open", "fixed"}), "ui.issue_filter")
+    field(ui.get("issue_filter", "all"), lambda v: choice(v, {"all", "active", "open", "fixed"}), "ui.issue_filter")
     for key in ("overlay", "auto_advance"):
         field(ui.get(key, True), lambda v: type(v) is bool, f"ui.{key}")
     field(ui.get("name_filter", ""), string, "ui.name_filter")

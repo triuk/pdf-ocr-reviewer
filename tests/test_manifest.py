@@ -76,3 +76,34 @@ def test_v1_migration_preserves_all_review_data_and_unknown_fields(tmp_path: Pat
     save_manifest(tmp_path, migrated, expected_revision=manifest_revision(tmp_path))
     assert next(iter(json.loads(path.read_text()))) == "repair_instructions"
     assert load_manifest(tmp_path) == migrated
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_old_repair_contract_migrates_without_requeueing_accepted_issues(tmp_path, version):
+    import copy
+    from app.manifest import migrate_manifest
+    from app.review import repair_instructions
+    data = default_manifest()
+    legacy = json.loads((Path(__file__).parent / 'fixtures/repair-instructions-v2.json').read_text())
+    legacy['version'] = version
+    if version == 1:
+        legacy.pop('writer_protocol')
+        legacy['rules'][-1] = legacy['rules'][-1].replace('pomocí writer_protocol', 'atomicky')
+    legacy['custom'] = {'preserve': True}
+    legacy['rules'].append('My additional rule')
+    legacy['statuses']['custom'] = 'Keep this too'
+    data['repair_instructions'] = legacy
+    data['files']['a.pdf'] = {'issues': [{'status': status, 'history': [{'custom': status}]}
+                                       for status in ('open', 'fixed', 'verified', 'dismissed')]}
+    original = copy.deepcopy(data)
+    migrated = migrate_manifest(data)
+    instructions = migrated['repair_instructions']
+    assert instructions['version'] == 3
+    assert instructions['rules'] == repair_instructions()['rules'] + ['My additional rule']
+    assert instructions['workflow']['eligible_statuses'] == ['open', 'fixed']
+    assert instructions['workflow']['excluded_statuses'] == ['dismissed', 'verified']
+    assert instructions['custom'] == {'preserve': True}
+    assert instructions['statuses']['custom'] == 'Keep this too'
+    assert migrated['files'] == original['files']
+    assert data == original
+    assert migrate_manifest(migrated) == migrated
