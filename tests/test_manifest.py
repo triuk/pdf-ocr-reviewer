@@ -107,3 +107,22 @@ def test_old_repair_contract_migrates_without_requeueing_accepted_issues(tmp_pat
     assert migrated['files'] == original['files']
     assert data == original
     assert migrate_manifest(migrated) == migrated
+
+
+@pytest.mark.parametrize('status,complete', [('ok', True), ('unreviewed', False), ('error', False), ('needs_review', False)])
+def test_legacy_file_completion_preserves_classification(tmp_path, status, complete):
+    from app.manifest import ensure_file_entry
+    from app.models import FileIdentity, ScannedPdf
+    data = default_manifest()
+    entry = {'status': status, 'reviewed_at': '2026-09-29T12:00:00+02:00', 'note': 'Keep'}
+    data['files']['one.pdf'] = entry
+    pdf = ScannedPdf('one.pdf', 'one.pdf', tmp_path / 'one.pdf', FileIdentity(10, 20))
+    assert pdf.to_public_dict(entry)['review_complete'] is complete
+    ensure_file_entry(data, pdf)
+    assert entry['review_complete'] is complete
+    assert entry['status'] == status
+    assert entry['note'] == 'Keep'
+    # Explicit unchecking overrides historical OK on every subsequent load.
+    entry['review_complete'] = False
+    ensure_file_entry(data, pdf)
+    assert pdf.to_public_dict(entry)['review_complete'] is False

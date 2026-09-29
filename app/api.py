@@ -66,6 +66,7 @@ class BackendApi:
             "selectFolderB": (0, self.select_folder_callback), "openFolderB": (1, self.open_folder_callback),
             "refreshFolderB": (0, self.refresh_folder_callback), "openDocumentB": (1, self.open_document_callback),
             "requestPageB": (4, self.request_page_callback), "setFileStatusB": (2, self.set_file_status_callback),
+            "setReviewCompleteB": (2, self.set_review_complete_callback),
             "toggleProblemPageB": (2, self.toggle_problem_page_callback), "setLastPageB": (2, self.set_last_page_callback),
             "setFileNoteB": (2, self.set_file_note_callback), "setUiOptionsB": (1, self.set_ui_options_callback),
             "exportCsvB": (0, self.export_csv_callback), "addIssueB": (2, self.add_issue_callback),
@@ -76,7 +77,7 @@ class BackendApi:
         window.bind("deleteDraftB", self.delete_draft_callback)
         window.bind("listBackupsB", self.list_backups_callback)
         window.bind("restoreBackupB", self.restore_backup_callback)
-        document_bound = {"requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"}
+        document_bound = {"requestPageB", "setFileStatusB", "setReviewCompleteB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"}
         for name, (argc, callback) in bindings.items():
             window.bind(name, self._context_callback(callback, argc, name in document_bound, 1 if name == "requestPageB" else 0))
 
@@ -193,6 +194,13 @@ class BackendApi:
         except (KeyError, ValueError, ManifestError) as exc:
             event.return_string(self._error("STATUS_SAVE_FAILED", str(exc)))
 
+    def set_review_complete_callback(self, event: Any) -> None:
+        try:
+            result = self.set_review_complete(event.get_string_at(0), json.loads(event.get_string_at(1)))
+            event.return_string(self._ok(result))
+        except (KeyError, ValueError, ManifestError, OSError) as exc:
+            event.return_string(self._error("REVIEW_SAVE_FAILED", str(exc)))
+
     def toggle_problem_page_callback(self, event: Any) -> None:
         try:
             file_id = event.get_string_at(0)
@@ -250,7 +258,7 @@ class BackendApi:
             revision = manifest_revision(resolved)
             manifest = load_manifest(resolved)
             if manifest_revision(resolved) != revision:
-                raise ManifestError("Manifest se během načítání změnil. Zkuste Načíst opravy znovu.")
+                raise ManifestError("Manifest se během načítání změnil. Zkuste Obnovit znovu.")
             for pdf in scanned:
                 ensure_file_entry(manifest, pdf)
 
@@ -277,7 +285,7 @@ class BackendApi:
                     pages = candidate.page_metadata()
                     after = pdf.path.stat()
                     if (after.st_size, after.st_mtime_ns) != (identity.size, identity.mtime_ns):
-                        raise PdfDocumentError("PDF se během načítání změnilo. Načtěte opravy znovu.")
+                        raise PdfDocumentError("PDF se během načítání změnilo. Použijte Obnovit.")
                 except Exception:
                     candidate.close()
                     raise
@@ -310,6 +318,7 @@ class BackendApi:
                 "document_id": self.document_id,
                 "manifest_revision": self._manifest_revision,
                 "status": entry.get("status", "unreviewed"),
+                "review_complete": entry["review_complete"],
                 "last_page": entry.get("last_page", 0),
                 "problem_pages": entry.get("problem_pages", []),
                 "note": entry.get("note", ""),
@@ -336,7 +345,7 @@ class BackendApi:
         if self.active_file_id != file_id or self.active_document is None:
             raise ValueError("Dokument už není otevřený. Načtěte jej znovu.")
         if expected_sha256 != self._document_sha256 or file_sha256(pdf.path) != self._document_sha256:
-            raise ValueError("PDF se změnilo. Nejdříve použijte Načíst opravy.")
+            raise ValueError("PDF se změnilo. Nejdříve použijte Obnovit.")
 
     def _commit_issue(self, snapshot: dict[str, Any]) -> None:
         try:
@@ -449,6 +458,26 @@ class BackendApi:
                 raise
             return {"file_id": file_id, "status": status}
 
+    def set_review_complete(self, file_id: str, payload: Any) -> dict[str, Any]:
+        with self._lock:
+            if (not isinstance(payload, dict) or set(payload) != {"complete", "expected_sha256"}
+                    or type(payload.get("complete")) is not bool):
+                raise ValueError("Invalid review completion update.")
+            self._check_issue_document(file_id, payload["expected_sha256"])
+            snapshot = copy.deepcopy(self._require_manifest())
+            entry = self._entry(file_id)
+            entry["review_complete"] = payload["complete"]
+            entry["review_completed_at"] = (datetime.now().astimezone().isoformat(timespec="seconds")
+                                             if payload["complete"] else None)
+            entry["identity"] = self._require_file(file_id).identity.to_dict()
+            try:
+                self._save_manifest()
+            except ManifestError as exc:
+                self.manifest = snapshot
+                self._set_persistence_error(exc)
+                raise
+            return self._require_file(file_id).to_public_dict(entry)
+
     def toggle_problem_page(self, file_id: str, page_index: int) -> dict[str, Any]:
         with self._lock:
             snapshot = copy.deepcopy(self._require_manifest())
@@ -511,7 +540,7 @@ class BackendApi:
                 raise ValueError("UI options must be an object.")
             manifest = self._require_manifest()
             ui = manifest["ui"]
-            known = {"issue_kind", "zoom_percent", "ocr_mode", "overlay", "status_filter", "name_filter", "auto_advance", "issue_filter"}
+            known = {"issue_kind", "zoom_percent", "ocr_mode", "overlay", "status_filter", "name_filter", "auto_advance", "issue_filter", "review_filter"}
             if set(options) - known:
                 raise ValueError("Unknown UI option.")
             candidate = copy.deepcopy(manifest)
@@ -534,7 +563,7 @@ class BackendApi:
             writer = csv.writer(output)
             writer.writerow([
                 "file", "status", "changed_since_review", "problem_pages",
-                "note", "reviewed_at", "size", "mtime_ns",
+                "note", "reviewed_at", "size", "mtime_ns", "review_complete", "review_completed_at",
             ])
             entries = manifest.get("files", {})
             for pdf in self.files.values():
@@ -551,6 +580,8 @@ class BackendApi:
                     entry.get("reviewed_at") or "",
                     pdf.identity.size,
                     pdf.identity.mtime_ns,
+                    "true" if entry.get("review_complete", entry.get("status") == "ok") else "false",
+                    entry.get("review_completed_at") or "",
                 ])
             return output.getvalue()
 

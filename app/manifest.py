@@ -52,6 +52,7 @@ def default_manifest() -> dict[str, Any]:
             "ocr_mode": "pdf_order",
             "overlay": True,
             "status_filter": "all",
+            "review_filter": "all",
             "name_filter": "",
             "auto_advance": True,
             "issue_kind": "position",
@@ -99,9 +100,10 @@ def migrate_manifest(data: Any) -> Any:
             data["repair_instructions"].setdefault("kind_notes", repair_instructions()["kind_notes"])
     if isinstance(data, dict) and isinstance(data.get("repair_instructions"), dict):
         instructions = data["repair_instructions"]
-        if instructions.get("version") in (1, 2):
+        migrated = migrate_repair_instructions(instructions)
+        if migrated is not instructions:
             data = copy.deepcopy(data)
-            data["repair_instructions"] = migrate_repair_instructions(instructions)
+            data["repair_instructions"] = migrated
     return data
 
 
@@ -136,6 +138,7 @@ def validate_manifest(data: Any) -> None:
     field(ui.get("ocr_mode", "pdf_order"), lambda v: choice(v, VALID_OCR_MODES), "ui.ocr_mode")
     field(ui.get("issue_kind", "position"), lambda v: choice(v, ISSUE_KINDS), "ui.issue_kind")
     field(ui.get("status_filter", "all"), lambda v: choice(v, {*VALID_FILE_STATUSES, "all"}), "ui.status_filter")
+    field(ui.get("review_filter", "all"), lambda v: choice(v, {"all", "unreviewed", "reviewed"}), "ui.review_filter")
     field(ui.get("issue_filter", "all"), lambda v: choice(v, {"all", "active", "open", "fixed"}), "ui.issue_filter")
     for key in ("overlay", "auto_advance"):
         field(ui.get(key, True), lambda v: type(v) is bool, f"ui.{key}")
@@ -150,6 +153,8 @@ def validate_manifest(data: Any) -> None:
         field(entry.get("last_page", 0), integer, path + ".last_page")
         field(entry.get("note", ""), string, path + ".note")
         field(entry.get("reviewed_at"), nullable_string, path + ".reviewed_at")
+        field(entry.get("review_complete", False), lambda v: type(v) is bool, path + ".review_complete")
+        field(entry.get("review_completed_at"), nullable_string, path + ".review_completed_at")
         pages = entry.get("problem_pages", [])
         field(pages, lambda v: isinstance(v, list) and all(integer(n) for n in v), path + ".problem_pages")
         if "identity" in entry:
@@ -187,6 +192,8 @@ def ensure_file_entry(manifest: dict[str, Any], pdf: ScannedPdf) -> dict[str, An
     entry.setdefault("problem_pages", [])
     entry.setdefault("note", "")
     entry.setdefault("reviewed_at", None)
+    entry.setdefault("review_complete", entry["status"] == "ok")
+    entry.setdefault("review_completed_at", entry["reviewed_at"] if entry["review_complete"] else None)
     entry.setdefault("issues", [])
     return entry
 
@@ -196,7 +203,7 @@ def save_manifest(folder: Path, manifest: dict[str, Any], *, expected_revision: 
     try:
         with file_lock(folder / f".{MANIFEST_FILENAME}.lock"):
             if manifest_revision(folder) != expected_revision:
-                raise ManifestError("Manifest změnil jiný nástroj. Použijte Načíst opravy; novější data nebyla přepsána.")
+                raise ManifestError("Manifest změnil jiný nástroj. Použijte Obnovit; novější data nebyla přepsána.")
             return _write_manifest(folder, manifest)
     except OSError as exc:
         raise ManifestWriteError(f"Manifest cannot be locked or written: {exc}") from exc

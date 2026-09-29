@@ -19,7 +19,8 @@ This pattern is adopted from the reference project.
 | `refreshFolderB()` | rescans the current folder |
 | `openDocumentB(fileId)` | opens a PDF and returns page metadata |
 | `requestPageB(requestId, fileId, pageIndex, renderWidth, ocrMode)` | queues a page render request |
-| `setFileStatusB(fileId, status)` | sets the review status |
+| `setReviewCompleteB(fileId, payloadJson)` | sets independent whole-file inspection completion |
+| `setFileStatusB(fileId, status)` | legacy classification API, retained for compatibility |
 | `setLastPageB(fileId, pageIndex)` | saves the last position |
 | `toggleProblemPageB(fileId, pageIndex)` | adds or removes a problem page |
 | `setFileNoteB(fileId, note)` | saves a note |
@@ -27,6 +28,12 @@ This pattern is adopted from the reference project.
 | `exportCsvB()` | creates a CSV summary of review results |
 | `addIssueB(fileId, payloadJson)` | saves a word/region issue with OCR snapshot and PDF version anchor |
 | `updateIssueB(fileId, issueId, patchJson)` | autosaves type/note, deletes (`dismissed`) or restores (`open`) a mark; legacy `verified` remains compatible |
+
+`setReviewCompleteB` accepts `{complete: boolean, expected_sha256: string}` and
+returns the updated public file entry, including `review_complete`. It checks the
+active document context, PDF hash and manifest revision. Completion changes leave
+legacy classification and issue data unchanged. Open-document and file-list data
+both include `review_complete`. CSV appends `review_complete` and `review_completed_at`.
 
 `addIssueB` accepts `page_index`, `bbox`, `kind`, optional `note`, and
 `expected_sha256` from `openDocumentB`. `updateIssueB` accepts `expected_sha256`

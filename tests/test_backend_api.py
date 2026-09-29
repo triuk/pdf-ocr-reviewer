@@ -83,3 +83,37 @@ def test_open_document_remains_available_when_manifest_write_fails(
         assert image.startswith(b"\x89PNG\r\n\x1a\n")
     finally:
         api.close()
+
+
+def test_completion_is_independent_of_legacy_status_and_issues(tmp_path):
+    import copy
+    import pytest
+    from app.manifest import ManifestError, manifest_revision, save_manifest
+    create_pdf(tmp_path / 'one.pdf', 'Sample')
+    api = BackendApi(tmp_path)
+    try:
+        opened = api.open_document('one.pdf')
+        sha = opened['ocr_sha256']
+        api.set_file_status('one.pdf', 'error')
+        api.add_issue('one.pdf', {'page_index': 0, 'bbox': [30, 30, 70, 70], 'kind': 'position', 'expected_sha256': sha})
+        before = copy.deepcopy(api.manifest['files']['one.pdf'])
+        api.set_review_complete('one.pdf', {'complete': True, 'expected_sha256': sha})
+        api.open_folder(tmp_path)
+        assert api.open_document('one.pdf')['review_complete'] is True
+        saved = load_manifest(tmp_path)['files']['one.pdf']
+        assert saved['status'] == 'error'
+        assert saved['issues'] == before['issues']
+        assert saved['review_completed_at']
+        # External edits still reject completion changes without corrupting memory.
+        external = load_manifest(tmp_path)
+        external['files']['one.pdf']['note'] = 'External change'
+        save_manifest(tmp_path, external, expected_revision=manifest_revision(tmp_path))
+        with pytest.raises(ManifestError):
+            api.set_review_complete('one.pdf', {'complete': False, 'expected_sha256': sha})
+        assert api.manifest['files']['one.pdf']['review_complete'] is True
+        api.open_folder(tmp_path)
+        api.open_document('one.pdf')
+        api.set_review_complete('one.pdf', {'complete': False, 'expected_sha256': sha})
+        assert load_manifest(tmp_path)['files']['one.pdf']['review_complete'] is False
+    finally:
+        api.close()

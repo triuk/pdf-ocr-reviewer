@@ -35,7 +35,7 @@ def repair_instructions() -> dict[str, Any]:
             "Zachovej id, source_sha256 a historii. Nastav target_sha256 opravené připomínky na hash výstupu; podle potřeby aktualizuj bbox/targets, aby ukazovaly opravené místo. Původní geometrii při změně ulož do history. U ostatních připomínek aktualizuj target_sha256 pouze po ověření, že jejich oblast a OCR cíle zůstaly platné; jinak ponech starou vazbu.",
             "U souboru aktualizuj ocr_sha256 na hash výsledku. Staré QA2/QA3 PASS platí jen pro původní hash; nevydávej je za kontrolu nové verze a nepřepisuj je na PASS bez příslušné kontroly.",
             "Při nejasnosti či neúspěchu nastav status=open a do history přidej {at,action:'repair_blocked',from:<předchozí stav>,to:'open',summary}. Starší result a historii zachovej. Smazání křížkem v revieweru znamená status=dismissed; dismissed ani historické verified neopravuj a automaticky neobnovuj. Spokojený uživatel označení smaže, neuspokojivé ponechá pro další průchod; není potřeba potvrzení ani ruční vrácení k opravě.",
-            "Manifest zapisuj pomocí writer_protocol až po úspěšném uložení a ověření PDF. Před zápisem znovu načti manifest; při souběžné změně sluč jen vlastní výsledky bez přepsání nových uživatelských změn. Zachovej repair_instructions, ui, poznámky, ostatní soubory i neznámá pole. Reviewer poté načte aktualizace tlačítkem Načíst opravy.",
+            "Manifest zapisuj pomocí writer_protocol až po úspěšném uložení a ověření PDF. Před zápisem znovu načti manifest; při souběžné změně sluč jen vlastní výsledky bez přepsání nových uživatelských změn. Zachovej repair_instructions, ui, poznámky, ostatní soubory i neznámá pole. Reviewer poté načte aktualizace tlačítkem Obnovit.",
         ],
         "writer_protocol": {
             "version": 1,
@@ -51,6 +51,7 @@ def repair_instructions() -> dict[str, Any]:
 
 # Exact historical defaults only: preserve user-added rules and unknown fields.
 _LEGACY_RULE_INDEX = {
+    "Manifest zapisuj pomocí writer_protocol až po úspěšném uložení a ověření PDF. Před zápisem znovu načti manifest; při souběžné změně sluč jen vlastní výsledky bez přepsání nových uživatelských změn. Zachovej repair_instructions, ui, poznámky, ostatní soubory i neznámá pole. Reviewer poté načte aktualizace tlačítkem Načíst opravy.": 11,
     "Zpracuj pouze issues se status=open u PDF v rozsahu zadaném uživatelem. Hranice rozsahu jsou včetně; názvy řaď podle (name.casefold(), name). Pokud hranice nejsou jednoznačné, vyžádej upřesnění.": 0,
     "Před prací načti aktuální manifest a PDF. Pro každé PDF ověř SHA-256 oproti target_sha256 řešených připomínek. Neshodu neobcházej; ponech připomínku otevřenou a zapiš důvod do history.": 1,
     "Připomínky jednoho PDF řeš jako dávku vůči ověřené vstupní verzi. Proveď cílenou vizuální kontrolu a kontrolu, že se obraz a neoznačené OCR nezměnily; neopakuj kompletní OCR ani celou QA bez důvodu.": 6,
@@ -61,6 +62,14 @@ _LEGACY_RULE_INDEX = {
 
 
 def migrate_repair_instructions(instructions: dict[str, Any]) -> dict[str, Any]:
+    if instructions.get("version") == 3:
+        rules = instructions.get("rules")
+        if isinstance(rules, list) and any(isinstance(r, str) and _LEGACY_RULE_INDEX.get(r) == 11 for r in rules):
+            upgraded = copy.deepcopy(instructions)
+            upgraded["rules"] = [repair_instructions()["rules"][11]
+                                 if isinstance(r, str) and _LEGACY_RULE_INDEX.get(r) == 11 else r for r in rules]
+            return upgraded
+        return instructions
     if instructions.get("version") not in (1, 2):
         return instructions
     upgraded = copy.deepcopy(instructions)

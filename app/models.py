@@ -44,6 +44,7 @@ class ScannedPdf:
             "size": self.identity.size,
             "mtime_ns": self.identity.mtime_ns,
             "status": entry.get("status", "unreviewed"),
+            "review_complete": entry.get("review_complete", entry.get("status") == "ok"),
             "last_page": entry.get("last_page", 0),
             "problem_page_count": len(problem_pages) if isinstance(problem_pages, list) else 0,
             "changed_since_review": changed,
