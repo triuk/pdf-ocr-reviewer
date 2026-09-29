@@ -26,7 +26,7 @@ This pattern is adopted from the reference project.
 | `setUiOptionsB(optionsJson)` | saves zoom, OCR mode, overlay, and filters |
 | `exportCsvB()` | creates a CSV summary of review results |
 | `addIssueB(fileId, payloadJson)` | saves a word/region issue with OCR snapshot and PDF version anchor |
-| `updateIssueB(fileId, issueId, patchJson)` | autosaves type/note or confirms, reopens, cancels an issue |
+| `updateIssueB(fileId, issueId, patchJson)` | autosaves type/note, deletes (`dismissed`) or restores (`open`) a mark; legacy `verified` remains compatible |
 
 `addIssueB` accepts `page_index`, `bbox`, `kind`, optional `note`, and
 `expected_sha256` from `openDocumentB`. `updateIssueB` accepts `expected_sha256`

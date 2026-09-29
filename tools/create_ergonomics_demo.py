@@ -55,7 +55,7 @@ def main():
         for index, name in enumerate(names):
             entry = manifest['files'][name]
             for n, issue in enumerate(entry['issues']):
-                status = ('open', 'fixed', 'verified')[n] if index != 1 else ('fixed', 'fixed', 'open')[n]
+                status = ('open', 'fixed', 'dismissed')[n] if index != 1 else ('fixed', 'fixed', 'open')[n]
                 issue['status'] = status
                 if status != 'open':
                     issue['result'] = {'summary':'Ukázkový stav pro test ergonomie; OCR nebylo opravováno.',
@@ -63,7 +63,7 @@ def main():
                     issue['history'].append({'at':issue['created_at'],'action':'demo_status','to':status})
         manifest['ui'].update(last_file=names[0], issue_filter='all', ocr_mode='layout', zoom_percent=100)
         save_manifest(args.destination, manifest, expected_revision=revision)
-    (args.destination / 'CTETE.txt').write_text('ZKUŠEBNÍ KOPIE — původní PDF se nemění.\nStavy oprav jsou simulované pro test ovládání, nikoli doklad provedených OCR oprav.\nV: zahájit ověření, C: potvrdit a další, R: vrátit připomínku, M: označovat, J/K: další/předchozí místo.\n', encoding='utf-8')
+    (args.destination / 'CTETE.txt').write_text('ZKUŠEBNÍ KOPIE — původní PDF se nemění.\nStavy oprav jsou simulované pro test ovládání, nikoli doklad provedených OCR oprav.\nM: označovat, J/K: další/předchozí místo, N: poznámka. Spokojenost: × na boxu. Jinak ponechat pro další externí průchod. Smazané: Archiv → Obnovit označení.\n', encoding='utf-8')
     print(args.destination.resolve())
 
 

@@ -39,7 +39,6 @@ const state = {
   issueSaveTimer: null,
   issueQueue: Promise.resolve(),
   issueBusy: false,
-  reviewAdvancing: false,
   draftRecords: new Map(),
   journalQueue: Promise.resolve(),
   journalPending: 0,
@@ -51,13 +50,13 @@ function bindElements() {
   const ids = [
     "selectFolderId", "folderPathId", "openPathId", "refreshFolderId", "exportCsvId", "saveStateId",
     "ocrModeId", "overlayId", "zoomId", "zoomValueId", "nameFilterId",
-    "statusFilterId", "fileIssueFilterId", "reviewRepairsId", "fileSummaryId", "fileListId", "documentNameId",
+    "statusFilterId", "fileIssueFilterId", "fileSummaryId", "fileListId", "documentNameId",
     "documentMetaId", "pageScrollId", "emptyStateId", "pagesId",
     "fileNoteId", "toastId",
     "issueSidebarId", "issueFilterId", "issueSummaryId", "issueListId",
     "markIssueId", "issueKindId", "previousIssueId", "nextIssueId", "markHintId",
     "issueEditorId", "selectedIssueTitleId", "selectedIssueKindId", "issueNoteId",
-    "issueResultId", "verifyIssueId", "reopenIssueId", "dismissIssueId", "closeIssueId",
+    "issueResultId", "reopenIssueId", "closeIssueId",
     "issueSaveId", "retryIssueSaveId", "draftRecoveryId", "draftRecoveryListId", "draftRecoverySummaryId",
     "backupsId", "backupDialogId", "backupSelectId", "restoreBackupId", "closeBackupsId", "backupDescriptionId",
   ];

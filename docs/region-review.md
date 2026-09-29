@@ -2,8 +2,9 @@
 
 Implemented 2026-09-25: extend the existing review workflow with persistent
 word/region issues, without editing PDFs in the reviewer. Mark with one click or a
-drag, reuse the last issue kind, save automatically, and review repairs with keyboard
-navigation. Reopening an issue changes its review status only.
+drag, reuse the last issue kind, save automatically, and browse marks with keyboard
+navigation. The manifest is the control file for OCR passes performed outside
+the application; the reviewer never runs the repair itself.
 
 Schema 2 migrates schema 1 without losing file notes, page flags, UI state or unknown
 fields. `repair_instructions` is the first JSON member and documents the external
@@ -18,9 +19,17 @@ them back for text operations. The rectangle identifies a review area, not an
 instruction to delete every intersecting text object. Word indexes are extraction
 snapshots, not stable object identifiers.
 
-Statuses: `open` (red), `fixed` (blue, awaiting human review), `verified` (green),
-`dismissed` (an accidental/cancelled mark, retained in history). Only the external
-repairer produces `fixed`; the reviewer confirms or reopens it. No PDF rollback.
+The current workflow uses two visible states: `open` (red, **K opravě**) and
+`fixed` (blue, **Po opravě**). Both are retained requests for the next external
+pass. A satisfactory result is removed with **× directly on the box**; an
+unsatisfactory result is simply left in place, optionally with an updated note.
+There is no V/C confirmation loop or R reopening step.
+
+Removal stores `dismissed` and preserves history. **Archiv → Obnovit označení**
+restores it to `open`, without changing the PDF. Legacy `verified` marks remain
+archived and excluded; migration never silently queues previously accepted work.
+The legacy backend confirmation operation remains compatible with older clients,
+but the current UI does not offer it.
 
 External writers must atomically replace the manifest, preserve unrelated data,
 record repair results/hashes and keep other annotations anchored to the resulting
@@ -30,7 +39,7 @@ changed manifest. Reload reopens the PDF and restores the reading position.
 
 Validation covers migration, invalid issue data, local/rotated coordinates, write
 failures, external edits, status/history round trips and version mismatches. UI
-checks cover click/drag marking, autosave, navigation, confirm/reopen and reload.
+checks cover click/drag marking, autosave, navigation, deletion/restoration and reload.
 
 ## Example issue
 
@@ -63,19 +72,37 @@ oversized and undersized boxes. Existing marks keep their keys and histories.
 }
 ```
 
-State transitions in the UI preserve the prior values and append history. A
-cancelled accidental mark is retained as `dismissed`, with a restore action in its
-filter. The **× directly on each box** cancels it without selecting it first or
-scrolling to the footer. A reopened issue may have an earlier `result`: that result describes the
-previous attempt, not a resolution of the new request.
+State transitions preserve prior values and append history. The **× directly on
+each box** deletes it without selecting it first or scrolling to the footer.
+A restored issue may have an earlier `result`: that describes the previous attempt.
 
 The application hashes PDFs when opening them and checks the active hash before
 saving issue changes. It detects stale targets, but does not guess their new
-locations. Human confirmation of a stale target is blocked. Manifest replacement
+locations. Stale locations are flagged for fresh marking. Manifest replacement
 uses an expected revision checked under the cooperative writer lock described
 below. External writers must use the same helper to participate in that protection.
 
-## Cooperative writer protocol (instructions version 2)
+## External passes (instructions version 3)
+
+`repair_instructions.workflow.eligible_statuses` is `["open", "fixed"]`;
+`excluded_statuses` is `["dismissed", "verified"]`. The short prompt can remain:
+
+> Podle `pdf-ocr-reviewer.manifest.json` oprav otevřené připomínky u PDF od `XXX.pdf` po `YYY.pdf` včetně.
+
+Here “otevřené připomínky” means every retained red or blue mark. Select a snapshot
+of eligible issues at the start of each explicitly requested pass; never requeue
+`fixed` within that same pass. Subsequent passes include retained blue marks again.
+On success, set `fixed`, store `result` and append a history record whose `from`
+is the actual prior state, including `fixed` for repeat attempts. Before replacing
+an earlier result, include it as `previous_result` in that new history record.
+On failure set `open`, append `repair_blocked`, and retain prior results/history.
+Concurrent deletion or changed notes must be reconciled before committing results.
+
+Migration replaces exact built-in v1/v2 rules, including the old “only open” rule,
+and preserves custom rules and unknown fields. It leaves issue states and history
+unchanged. The schema remains version 2; the instructions are version 3.
+
+## Cooperative writer protocol
 
 Before reading the manifest, capture its revision with:
 
@@ -117,16 +144,10 @@ visible revision; **Ponechat uložené** discards that local draft. Missing file
 issues keep their drafts available for copying. A successful old save only
 acknowledges its own draft token and cannot erase newer typing.
 
-## Review across files
+## Browsing across files
 
-The PDF filters combine name, file status and issue state. **Má otevřené
-připomínky** selects PDFs with open issues; **Čeká na ověření** selects those with
-fixed issues. Arrow navigation and file-status auto-advance honor those filters.
-
-**Ověřit opravy · V** starts a review of fixed issues while retaining the name
-and file-status filters. **C** confirms and selects the next fixed issue,
-continuing into the next eligible PDF. Remaining earlier files are visited only
-if they still have fixes awaiting review. After the final fix, the app stays on
-the last reviewed document and reports completion. Stale or geometrically
-invalid targets remain visible and cannot be confirmed. **R** only reopens the
-selected issue; it never reverses a PDF edit.
+The PDF filters combine name, file status and issue state. **Má ponechané
+připomínky** includes PDFs with red or blue marks; **Má místa po opravě** shows
+PDFs with blue marks. Arrow navigation and file-status auto-advance honor filters.
+**J/K** browse marks in the current PDF without changing their status. **N** focuses
+the note. **Načíst opravy** reloads externally saved PDF and manifest changes.

@@ -1,7 +1,7 @@
 "use strict";
 
 const issueKindLabels = { position: "Špatná poloha", oversized: "Špatná velikost boxu", text: "Chybný text", missing: "Chybějící text", other: "Jiný problém" };
-const issueStatusLabels = { open: "Otevřeno", fixed: "K ověření", verified: "Potvrzeno", dismissed: "Zrušeno" };
+const issueStatusLabels = { open: "K opravě", fixed: "Po opravě", verified: "Dříve potvrzeno", dismissed: "Smazáno" };
 const issueSymbols = { open: "!", fixed: "◉", verified: "✓", dismissed: "×" };
 
 function selectedIssue() {
@@ -10,7 +10,8 @@ function selectedIssue() {
 
 function filteredIssues() {
   return (state.document?.issues || []).filter((issue) => {
-    if (state.issueFilter === "all") return issue.status !== "dismissed";
+    if (state.issueFilter === "all") return true;
+    if (state.issueFilter === "archived") return ["dismissed", "verified"].includes(issue.status);
     if (state.issueFilter === "active") return ["open", "fixed"].includes(issue.status);
     return issue.status === state.issueFilter;
   }).sort((a, b) => a.page_index - b.page_index || a.bbox[1] - b.bbox[1] || a.bbox[0] - b.bbox[0]);
@@ -19,7 +20,7 @@ function filteredIssues() {
 function draftKey(fileId, issueId) { return JSON.stringify([state.folder, fileId, issueId]); }
 
 function issueSummaryText(counts) {
-  return `${counts.open || 0} otevřených · ${counts.fixed || 0} k ověření · ${counts.verified || 0} potvrzených`;
+  return `${(counts.open || 0) + (counts.fixed || 0)} ponechaných · ${counts.fixed || 0} po opravě`;
 }
 
 function renderIssueSidebar() {
@@ -67,11 +68,8 @@ function renderIssueEditor() {
   elements.issueNoteId.value = draft?.note ?? issue.note;
   elements.issueSaveId.textContent = draft ? "Neuložené změny" : "Uloženo";
   elements.retryIssueSaveId.hidden = !draft;
-  elements.verifyIssueId.hidden = issue.status !== "fixed";
-  elements.verifyIssueId.disabled = (issue.stale || issue.invalid_target) || state.issueBusy;
-  elements.reopenIssueId.hidden = issue.status === "open";
+  elements.reopenIssueId.hidden = !["dismissed", "verified"].includes(issue.status);
   elements.reopenIssueId.disabled = state.issueBusy;
-  elements.dismissIssueId.hidden = issue.status === "dismissed";
   const result = issue.result ? `Poslední oprava: ${issue.result.summary}` : "";
   elements.issueResultId.textContent = (issue.stale || issue.invalid_target)
     ? `⚠ Označení patří k jiné verzi PDF. Znovu označte aktuální místo; toto můžete zrušit. ${result}`
@@ -98,7 +96,7 @@ function renderPageIssues(pageIndex) {
     const layer = document.createElement("div");
     layer.className = "issue-annotations";
     for (const issue of state.document?.issues || []) {
-      if (issue.page_index !== pageIndex || issue.status === "dismissed") continue;
+      if (issue.page_index !== pageIndex || !["open", "fixed"].includes(issue.status)) continue;
       const box = document.createElement("div");
       box.className = `issue-box issue-${issue.status}`;
       box.dataset.issueId = issue.id;
@@ -121,8 +119,8 @@ function renderPageIssues(pageIndex) {
       dismiss.type = "button";
       dismiss.className = "issue-box-dismiss";
       dismiss.textContent = "×";
-      dismiss.title = "Zrušit označení";
-      dismiss.setAttribute("aria-label", `Zrušit označení: ${issueKindLabels[issue.kind]}, strana ${pageIndex + 1}`);
+      dismiss.title = "Smazat označení — vyřadit z dalších oprav";
+      dismiss.setAttribute("aria-label", `Smazat označení: ${issueKindLabels[issue.kind]}, strana ${pageIndex + 1}`);
       dismiss.addEventListener("pointerdown", (event) => {
         // Keep the note focused until its draft is flushed by the action itself.
         event.preventDefault();
@@ -130,7 +128,7 @@ function renderPageIssues(pageIndex) {
       });
       dismiss.addEventListener("click", (event) => {
         event.stopPropagation();
-        changeIssueStatus("dismissed", issue.id, false);
+        changeIssueStatus("dismissed", issue.id);
       });
       controls.append(badge, dismiss);
       box.append(controls);
@@ -250,7 +248,7 @@ async function flushIssueDraft() {
   return saveIssueDraft(draftKey(state.activeFileId, state.selectedIssueId));
 }
 
-async function changeIssueStatus(status, issueId = state.selectedIssueId, advance = true) {
+async function changeIssueStatus(status, issueId = state.selectedIssueId) {
   const issue = state.document?.issues.find((item) => item.id === issueId);
   if (!issue || state.issueBusy || state.navigating) return;
   const fileId = state.activeFileId;
@@ -259,70 +257,17 @@ async function changeIssueStatus(status, issueId = state.selectedIssueId, advanc
   renderIssueEditor();
   try {
     if (!await flushIssueDraft()) return;
-    const visible = filteredIssues();
-    const index = visible.findIndex((item) => item.id === issue.id);
-    const next = [...visible.slice(index + 1), ...visible.slice(0, Math.max(index, 0))]
-      .find((item) => status !== "verified" || item.status === "fixed")?.id;
     const data = await queueIssueWork(() => callBackend("updateIssueB", fileId, issue.id, JSON.stringify({ status, expected_sha256: hash })));
     applyIssueResponse(data);
     if (state.activeFileId !== fileId) return;
-    if (status === "verified" && advance) {
-      await advanceToNextFixed(next);
-    } else {
-      if (state.selectedIssueId === issue.id && status === "dismissed") {
-        state.selectedIssueId = (advance && next) || null;
-        if (advance && next) await selectIssue(next);
-      }
-      showToast(status === "open" ? "Připomínka vrácena k opravě. PDF se nemění." : status === "verified" ? "Oprava potvrzena." : "Označení zrušeno. Najdete jej ve filtru Zrušené.");
+    if (status === "dismissed" && state.selectedIssueId === issue.id) state.selectedIssueId = null;
+    if (status === "open") {
+      state.issueFilter = "active";
+      elements.issueFilterId.value = "active";
     }
+    showToast(status === "open" ? "Označení obnoveno pro další opravu. PDF se nemění." : "Označení smazáno. Obnovit jej můžete v Archivu.");
   } catch (error) { showToast(error.message, true); }
   finally { state.issueBusy = false; refreshIssueViews(); }
-}
-
-function fixedIssuesInDocument() {
-  return (state.document?.issues || []).filter(issue => issue.status === "fixed")
-    .sort((a, b) => a.page_index - b.page_index || a.bbox[1] - b.bbox[1] || a.bbox[0] - b.bbox[0]);
-}
-
-async function advanceToNextFixed(preferredId = null) {
-  if (state.reviewAdvancing) return false;
-  state.reviewAdvancing = true;
-  try {
-    const select = async issue => {
-      state.issueFilter = "fixed";
-      elements.issueFilterId.value = "fixed";
-      await selectIssue(issue.id);
-      // Keep C/J/K usable after clicking a toolbar button or changing documents.
-      document.activeElement?.blur();
-      showToast(issue.stale || issue.invalid_target ? "Toto označení vyžaduje nové přiřazení k PDF; nelze je potvrdit." : "Další oprava k ověření · C potvrdit · R vrátit");
-      return true;
-    };
-    const remaining = fixedIssuesInDocument();
-    const visibleFiles = filteredFiles();
-    if (remaining.length && visibleFiles.some(file => file.file_id === state.activeFileId)) {
-      return await select(remaining.find(issue => issue.id === preferredId) || remaining[0]);
-    }
-    const start = state.files.findIndex(file => file.file_id === state.activeFileId);
-    const ordered = [...state.files.slice(start + 1), ...state.files.slice(0, Math.max(0, start))];
-    const eligible = new Set(visibleFiles.map(file => file.file_id));
-    for (const file of ordered) {
-      if (!eligible.has(file.file_id) || !file.issue_counts?.fixed) continue;
-      if (!await openDocumentF(file.file_id)) return false;
-      const issue = fixedIssuesInDocument()[0];
-      if (issue) return await select(issue);
-    }
-    showToast("V aktuálním výběru už nejsou další opravy k ověření.");
-    return false;
-  } finally { state.reviewAdvancing = false; }
-}
-
-async function startRepairReview() {
-  if (state.navigating || state.issueBusy || state.reviewAdvancing) return;
-  if (!await flushIssueDraft() || !await flushFileNote()) return;
-  elements.fileIssueFilterId.value = "fixed";
-  await saveUiOptions({issue_filter: "fixed"});
-  renderFileList();
-  await advanceToNextFixed();
 }
 
 function setMarking(enabled) {
@@ -415,9 +360,7 @@ function attachIssueEvents() {
     rememberKind(elements.selectedIssueKindId.value);
     scheduleIssueDraft();
   });
-  elements.verifyIssueId.addEventListener("click", () => changeIssueStatus("verified"));
   elements.reopenIssueId.addEventListener("click", () => changeIssueStatus("open"));
-  elements.dismissIssueId.addEventListener("click", () => changeIssueStatus("dismissed"));
   elements.retryIssueSaveId.addEventListener("click", () => {
     // An explicit retry after reload applies the retained note to the now-visible revision.
     const draft = state.issueDrafts.get(draftKey(state.activeFileId, state.selectedIssueId));
@@ -433,14 +376,11 @@ function attachIssueEvents() {
 function handleIssueKeyboard(event) {
   if (event.ctrlKey || event.metaKey || event.altKey) return false;
   const key = event.key.toLowerCase();
-  if (key === "v") startRepairReview();
-  else if (key === "m") setMarking(!state.marking);
+  if (key === "m") setMarking(!state.marking);
   else if (key === "escape") setMarking(false);
   else if (key === "[" || key === "k") navigateIssue(-1);
   else if (key === "]" || key === "j") navigateIssue(1);
   else if (key === "n" && selectedIssue()) elements.issueNoteId.focus();
-  else if (key === "c" && selectedIssue()?.status === "fixed") changeIssueStatus("verified");
-  else if (key === "r" && selectedIssue() && selectedIssue().status !== "open") changeIssueStatus("open");
   else return false;
   event.preventDefault();
   return true;

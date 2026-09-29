@@ -15,7 +15,7 @@ A functional prototype is implemented:
 - atomically written `pdf-ocr-reviewer.manifest.json`;
 - CSV export of review results;
 - one-click OCR word marks and drag-to-mark regions, with autosaved notes;
-- red/open, blue/repaired and green/confirmed regions, keyboard review and reopening;
+- red/new and blue/repaired regions; keep a mark for another external pass or delete it with ×;
 - schema-2 manifest with repair instructions, SHA-256 anchors, QA references and issue history;
 - explicit reload of external repairs and protection against overwriting a changed manifest;
 - automated backend tests;
@@ -82,25 +82,29 @@ an optional note saves automatically. **Shift + drag** creates a region over an
 existing mark. **Esc** returns to ordinary text selection. In Layout mode you can
 also mark the spatial OCR pane.
 
-The sidebar shows counts and a filterable list. **J/K** move between marks,
-**N** focuses the selected mark's note, **C** confirms a repaired mark and advances
-to the next repaired mark, and **R** reopens it. Red means open, blue means repaired
-and awaiting your review, green means confirmed. Symbols and labels accompany the
-colors. Reopening changes only the issue status, never the PDF. Cancel accidental
-marks with the **× directly on the box**, in either reading or marking mode;
-they remain recoverable in the **Zrušené** filter. **Špatná velikost boxu** covers
-boxes that are too large or too small.
+The sidebar shows counts and a filterable list. **J/K** move between marks and
+**N** focuses the selected mark's note. Red means **K opravě**, blue means **Po opravě**.
+After checking an external repair, delete a satisfactory mark with the **× directly
+on its box**. Leave an unsatisfactory mark in place for the next external pass;
+no confirmation or reopening is needed. Both red and blue marks remain repair
+requests until deleted. Symbols and labels accompany the colors.
 
-Everything is saved in `pdf-ocr-reviewer.manifest.json`. Existing version-1 manifests
-are migrated on save. The first member, `repair_instructions`, describes the complete
+Deleted marks remain recoverable in **Archiv → Obnovit označení**. Older confirmed
+marks are also archived and excluded from repairs. Restoring a mark never changes
+PDF bytes. **Špatná velikost boxu** covers boxes that are too large or too small.
+
+Everything is saved in `pdf-ocr-reviewer.manifest.json`. Older manifests and built-in instructions
+are migrated on save, preserving marks, history and custom extensions. The first member, `repair_instructions`, describes the complete
 repair contract, so a tool with access to the folder can receive this short prompt:
 
 > Podle `pdf-ocr-reviewer.manifest.json` oprav otevřené připomínky u PDF od `XXX.pdf` po `YYY.pdf` včetně.
 
-The reviewer does not run OCR or modify PDFs itself. After an external repair,
+The reviewer does not run OCR or modify PDFs itself. The manifest is the control
+file for the external tool. Each requested pass includes all retained `open` and
+`fixed` marks within the inclusive filename range, once per pass. After an external repair,
 click **Načíst opravy** to reread both the manifest and the PDF. External writers use the shared revision-checked writer described in the
 manifest instructions; a changed revision is rejected under the writer lock. Unsaved notes are journaled locally and can be recovered after restart;
-the recovery panel compares them with the current manifest before applying them. A stale PDF anchor is visibly flagged and cannot be confirmed: mark
+the recovery panel compares them with the current manifest before applying them. A stale PDF anchor is visibly flagged: mark
 the current location again and cancel the obsolete mark. QA PASS reports remain
 evidence only for the PDF hash they originally checked.
 

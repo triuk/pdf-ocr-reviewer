@@ -109,26 +109,20 @@ Priorita: střední. Navazuje na bezpečný zápis a kontext dokumentů.
 Hotovo, když lze obnovit neuložený text i poslední platný manifest a aplikace
 srozumitelně rozlišuje uložený stav, koncept a konflikt.
 
-## 5. Rychlejší kontrola oprav napříč PDF
+## 5. Ergonomie připomínek
 
-Priorita: střední. Navazuje na opravenou navigaci.
+- [x] Filtry PDF kombinují název, stav souboru a připomínky; navigace je respektuje.
+- [x] J/K vybírá připomínky v PDF, N otevře poznámku, M označování.
+- [x] Po zpětné vazbě odstranit potvrzování V → C a vracení R.
+- [x] Červené i modré ponechané označení je zadání pro další externí OCR průchod.
+- [x] Spokojený uživatel smaže označení × přímo na boxu, ostatní ponechá.
+- [x] Smazané i dříve potvrzené označení je v Archivu s možností obnovy.
+- [x] Aktualizovat manifestové instrukce a migrovat původní pravidla bez ztráty historie.
+- [x] Ověřit externí výsledek, smazání/obnovu, opakovaný průchod a filtry přes více PDF.
+- [ ] Uživatelsky ověřit zjednodušený postup podle `ergonomics-acceptance.md`.
 
-- [x] Přidat filtry PDF „Má otevřené připomínky“ a „Čeká na ověření“;
-      kombinovat je s dosavadním filtrem názvu a stavu souboru.
-- [x] Rozšířit „Potvrdit a další“ tak, aby po poslední opravě aktuálního PDF
-      našlo další opravu v dalším odpovídajícím souboru.
-- [x] Zachovat předvídatelné pořadí souborů a připomínek. Po poslední opravě
-      zobrazit dokončení a nepřecházet bez důvodu dokola.
-- [x] Zachovat ovládání klávesnicí a fokus; sjednotit nově dotčené popisky
-      do češtiny. Nevyžadovat opakované nastavování typu připomínky.
-- [x] Ověřit celý průchod opravami přes několik PDF včetně vrácení k opravě,
-      zrušení a obnovení připomínky, filtrů a neplatné vazby na verzi PDF.
-
-Hotovo, když lze vyfiltrované opravy projít a potvrdit klávesnicí bez ručního
-přepínání souborů a bez přeskakování relevantních položek.
-
-Implementace a automatický průchod přes více PDF jsou hotové. Následuje
-uživatelská zkouška ergonomie; etapu 6 spustit až po jejím vyhodnocení.
+OCR běží mimo program; reviewer pouze připravuje manifest a načítá výsledky.
+Etapu 6 zahájit až po vyhodnocení uživatelské zkoušky.
 
 ## 6. Výkon autosave a renderování
 
@@ -142,7 +136,7 @@ Priorita: po dokončení správnosti. Optimalizace podložit měřením.
       překreslování seznamů tam, kde měření prokáže dopad.
 - [ ] Navrhnout opětovné použití ověřeného hashe pouze s jasnými pravidly
       zneplatnění. Nezaměnit pouhou shodu velikosti a času souboru za záruku
-      shodného obsahu; zachovat kontrolu verze před potvrzením opravy.
+      shodného obsahu; zachovat kontrolu verze před uložením připomínky.
 - [ ] Omezit frontu nepotřebných renderů a velikost výsledného rastru podle
       počtu pixelů. Změnu renderovací architektury provést jen při doložené potřebě.
 - [ ] Zapsat srovnání před/po na stejných datech a ověřit regresní scénáře.
@@ -161,8 +155,8 @@ ověří celý výsledek.
       Používat malé syntetické PDF, včetně otočené/oříznuté stránky;
       uživatelovo PDF nesmí být nutnou součástí CI.
 - [ ] Zachovat self-test zdrojové aplikace a obou zabalených binárek.
-- [ ] Ověřit integračně externí opravu, načtení výsledků, potvrzení,
-      znovuotevření připomínky a obnovu po konfliktu či restartu.
+- [ ] Ověřit integračně externí opravu, načtení výsledků, smazání,
+      obnovení připomínky a obnovu po konfliktu či restartu.
 - [ ] Aktualizovat popis manifestu, API, klávesových zkratek, záloh a externího
       zápisového postupu; uvést skutečně ověřené platformy a známé limity.
 - [ ] Připravit release poznámky a vydání až po splnění přejímacích podmínek.

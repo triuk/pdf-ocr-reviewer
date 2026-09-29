@@ -321,4 +321,6 @@ dialog select { max-width: 100%; margin-bottom: 12px; }
 .page-scroll { grid-row: 5; }
 .note-panel { grid-row: 6; }
 
-.file-issue-filter, .review-repairs { margin: 0 10px 8px; max-width: calc(100% - 20px); }
+.file-issue-filter { margin: 0 10px 8px; max-width: calc(100% - 20px); }
+
+.issue-help { margin: 0; padding: 0 10px 8px; color: var(--muted); font-size: 11px; line-height: 1.4; }

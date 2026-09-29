@@ -234,7 +234,6 @@ function attachEvents() {
     renderFileList();
     saveUiOptions({ issue_filter: elements.fileIssueFilterId.value });
   });
-  elements.reviewRepairsId.addEventListener("click", startRepairReview);
   elements.fileNoteId.addEventListener("input", scheduleSaveNote);
   elements.pageScrollId.addEventListener("scroll", scheduleSaveCurrentPage, { passive: true });
   document.querySelectorAll(".status-button").forEach((button) => {

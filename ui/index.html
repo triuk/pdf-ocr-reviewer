@@ -63,23 +63,23 @@
       </div>
       <select id="fileIssueFilterId" class="file-issue-filter" aria-label="Filtrovat PDF podle připomínek">
         <option value="all">Všechna PDF</option>
-        <option value="open">Má otevřené připomínky</option>
-        <option value="fixed">Čeká na ověření</option>
+        <option value="active">Má ponechané připomínky</option>
+        <option value="open">Má místa k opravě</option>
+        <option value="fixed">Má místa po opravě</option>
       </select>
-      <button id="reviewRepairsId" type="button" class="secondary review-repairs" title="V — zahájit průchod opravenými místy">Ověřit opravy · V</button>
       <div id="fileSummaryId" class="file-summary">Není otevřená složka.</div>
       <div id="fileListId" class="file-list" role="listbox" aria-label="PDF files"></div>
       <section id="issueSidebarId" class="issue-sidebar" aria-label="Připomínky dokumentu" hidden>
         <div class="issue-list-heading"><strong>Připomínky</strong>
           <select id="issueFilterId" aria-label="Filtrovat připomínky">
-            <option value="active">Otevřené a k ověření</option>
-            <option value="fixed">K ověření</option>
-            <option value="open">Otevřené</option>
-            <option value="all">Všechny</option>
-            <option value="dismissed">Zrušené</option>
+            <option value="active">Ponechané</option>
+            <option value="fixed">Po opravě</option>
+            <option value="open">K opravě</option>
+            <option value="archived">Archiv</option>
           </select>
         </div>
         <div id="issueSummaryId" class="issue-summary"></div>
+        <p class="issue-help">Po externí opravě je místo modré. Vyhovuje? Smažte × na boxu. Jinak ho ponechte pro další průchod.</p>
         <div id="issueListId" class="issue-list"></div>
       </section>
     </aside>
@@ -143,9 +143,7 @@
           </div>
           <div id="issueResultId" class="issue-result"></div>
           <div class="issue-actions">
-            <button id="verifyIssueId" type="button" title="C — potvrdit a přejít na další">Potvrdit a další · C</button>
-            <button id="reopenIssueId" type="button" class="secondary" title="R — znovu otevřít připomínku">Vrátit k opravě · R</button>
-            <button id="dismissIssueId" type="button" class="secondary">Zrušit označení</button>
+            <button id="reopenIssueId" type="button" class="secondary" title="Obnovit smazané nebo dříve potvrzené označení">Obnovit označení</button>
             <button id="retryIssueSaveId" type="button" class="secondary" hidden>Uložit poznámku</button>
           </div>
         </section>

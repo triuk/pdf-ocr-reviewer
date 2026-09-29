@@ -5,14 +5,16 @@ function filteredFiles() {
   return state.files.filter((file) => {
     const nameMatch = !nameFilter || file.name.toLocaleLowerCase("cs").includes(nameFilter);
     const statusMatch = statusFilter === "all" || file.status === statusFilter;
-    const issueMatch = issueFilter === "all" || (file.issue_counts?.[issueFilter] || 0) > 0;
+    const count = issueFilter === "active"
+      ? (file.issue_counts?.open || 0) + (file.issue_counts?.fixed || 0)
+      : (file.issue_counts?.[issueFilter] || 0);
+    const issueMatch = issueFilter === "all" || count > 0;
     return nameMatch && statusMatch && issueMatch;
   });
 }
 
 function renderFileList() {
   const visible = filteredFiles();
-  if (elements.reviewRepairsId) elements.reviewRepairsId.disabled = !state.files.length;
   elements.fileListId.replaceChildren();
   for (const file of visible) {
     const button = document.createElement("button");
@@ -41,10 +43,10 @@ function renderFileList() {
 
     button.append(status, name, meta);
     const counts = file.issue_counts || {};
-    if (counts.open || counts.fixed || counts.verified) {
+    if (counts.open || counts.fixed) {
       const summary = document.createElement("span");
       summary.className = "file-issue-summary";
-      for (const [key, label] of [["open", "otevř."], ["fixed", "k ověření"], ["verified", "potvrz."]]) {
+      for (const [key, label] of [["open", "k opravě"], ["fixed", "po opravě"]]) {
         if (!counts[key]) continue;
         const part = document.createElement("span");
         part.className = `issue-${key}`;

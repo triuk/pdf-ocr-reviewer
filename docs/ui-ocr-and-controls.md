@@ -36,8 +36,6 @@ The **Overlay** switch displays semi-transparent OCR objects or their rectangles
 | `M` | toggle word/region marking; click a word or drag a rectangle |
 | `Esc` | return to text selection / cancel an active rectangle |
 | `J` / `K` | next / previous issue in the current filter (`]` / `[` also work) |
-| `C` | confirm the selected repaired issue and advance to the next repaired issue |
-| `R` | reopen the selected repaired/confirmed/cancelled issue |
 
 When an issue is selected, `N` focuses its note; otherwise it focuses the file note.
 Shortcuts do not intercept typing in inputs. Shift + drag marks an area over an
@@ -47,3 +45,8 @@ labels are independent of the ordinary OCR overlay switch.
 After marking a file, automatic advancement to the next unreviewed file can be enabled in the settings.
 
 ---
+
+OCR passes run outside the reviewer using the manifest. Red and blue marks both
+remain requests for the next pass. Delete satisfactory marks with × on the box;
+leave other marks in place. Deleted and legacy confirmed marks are in Archiv,
+where Obnovit označení restores a request without changing PDF content.

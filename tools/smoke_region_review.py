@@ -141,7 +141,7 @@ def main():
             click(f'.scan-pane .issue-box[data-issue-id="{third_id}"] .issue-box-dismiss')
             wait_for("state.document?.issue_counts.dismissed === 1")
             assert js("return state.selectedIssueId;") == second_id
-            js("state.issueFilter='dismissed';elements.issueFilterId.value='dismissed';renderIssueSidebar();")
+            js("state.issueFilter='archived';elements.issueFilterId.value='archived';renderIssueSidebar();")
             click(".issue-list-item")
             click("#reopenIssueId")
             wait_for("state.document?.issue_counts.dismissed === 0")
@@ -169,26 +169,20 @@ def main():
             click("#refreshFolderId")
             wait_for("state.document?.issue_counts.fixed === 2 && state.pageData.has(0)")
             assert js("return state.issueKind;") == "oversized"
-            js(f"selectIssue({json.dumps(second_id)},false);")
-            wait_for("!elements.verifyIssueId.hidden")
-            click("#verifyIssueId")
-            wait_for("state.document?.issue_counts.verified === 1 && state.selectedIssueId !== " + json.dumps(second_id))
-            assert js("return selectedIssue().id;") == first_id
-            click("#reopenIssueId")
-            wait_for("selectedIssue().status === 'open'")
-            assert file_sha256(pdf) == before, "Reopen changed PDF"
-            js("state.issueFilter='all';elements.issueFilterId.value='all';refreshIssueViews();")
-            wait_for("document.querySelectorAll('.scan-pane .issue-box').length === 2")
-            assert js("return Boolean(document.querySelector('.scan-pane .issue-open') && document.querySelector('.scan-pane .issue-verified'));")
-            # Keyboard navigation and note focus, including ordinary text selection mode.
+            # Satisfied: delete the blue mark directly on its box. The other blue
+            # mark remains eligible without a confirm/reopen action.
+            click(f'.scan-pane .issue-box[data-issue-id="{second_id}"] .issue-box-dismiss')
+            wait_for("state.document?.issue_counts.fixed === 1 && state.document.issue_counts.dismissed === 2")
+            assert js("return Boolean(document.querySelector('.scan-pane .issue-fixed'));")
+            assert not js("return Boolean(document.querySelector('#verifyIssueId, #reviewRepairsId'));")
             js("document.activeElement.blur();")
             command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "j"}, {"type": "keyUp", "value": "j"}]}]})
-            wait_for("state.selectedIssueId === " + json.dumps(second_id))
+            wait_for("state.selectedIssueId === " + json.dumps(first_id))
             command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "n"}, {"type": "keyUp", "value": "n"}]}]})
             assert js("return document.activeElement.id;") == "issueNoteId"
-            # All typed data survives refresh and version-2 instructions are first.
+            # All typed data survives refresh and version-3 instructions are first.
             click("#refreshFolderId")
-            wait_for("state.pageData.has(0) && state.document.issue_counts.open === 1")
+            wait_for("state.pageData.has(0) && state.document.issue_counts.fixed === 1")
             assert next(iter(json.loads((folder / MANIFEST_FILENAME).read_text()))) == "repair_instructions"
             assert js("return state.document.issues.find(i => i.id === " + json.dumps(first_id) + ").note;") == "Text je správně; zmenšit box."
             wait_for("!state.navigating && state.journalPending === 0")
@@ -214,7 +208,8 @@ def main():
             click("#backupsId")
             wait_for("elements.backupDialogId.open && elements.backupSelectId.options.length > 0")
             click("#closeBackupsId")
-            # Review progresses into a second PDF, then stops after the final fix.
+            # A later external pass includes the retained blue mark, but never
+            # the deleted marks. The app itself only loads the external result.
             wait_for("!state.navigating && state.journalPending === 0")
             second = folder / "second-ocr.pdf"
             shutil.copyfile(pdf, second)
@@ -225,33 +220,40 @@ def main():
             second_issue = response["issue_id"]
             builder.close()
             batch = load_manifest(folder)
-            for name in (pdf.name, second.name):
-                issue = batch["files"][name]["issues"][0]
+            eligible = batch["repair_instructions"]["workflow"]["eligible_statuses"]
+            chosen = [(name, issue) for name, entry in batch["files"].items()
+                      for issue in entry["issues"] if issue["status"] in eligible]
+            assert {issue["id"] for _, issue in chosen} == {first_id, second_issue}
+            for name, issue in chosen:
                 sha = file_sha256(folder / name)
+                previous = issue.get("result")
+                issue["history"].append({"action": "fixed", "from": issue["status"], "to": "fixed",
+                                         "previous_result": previous, "summary": "Simulated external pass 2"})
                 issue["status"] = "fixed"
-                issue["result"] = {"summary": "Test review flow", "before_sha256": sha, "after_sha256": sha, "at": "2026-09-29T12:00:00+02:00"}
+                issue["result"] = {"summary": "Simulated external pass 2", "before_sha256": sha, "after_sha256": sha, "at": "2026-09-29T12:00:00+02:00"}
             save_manifest(folder, batch, expected_revision=manifest_revision(folder))
             click("#refreshFolderId")
-            wait_for("!state.navigating && state.files.length === 2 && state.document?.issue_counts.fixed === 1")
-            click("#reviewRepairsId")
-            wait_for("selectedIssue()?.status === 'fixed' && state.ui.issue_filter === 'fixed' && !state.reviewAdvancing")
-            click("#verifyIssueId")
-            wait_for("state.activeFileId === 'second-ocr.pdf' && state.selectedIssueId === " + json.dumps(second_issue) + " && !state.issueBusy && !state.navigating")
-            click("#verifyIssueId")
-            wait_for("!state.issueBusy && state.document?.issue_counts.verified === 1 && elements.toastId.textContent.includes('nejsou další')")
-            assert js("return state.activeFileId;") == second.name
-            click("#reopenIssueId")
-            wait_for("state.document?.issue_counts.open === 1")
-            js("elements.fileIssueFilterId.value='open';elements.fileIssueFilterId.dispatchEvent(new Event('change')); ")
+            wait_for("!state.navigating && state.files.length === 2 && state.document?.issue_counts.fixed === 1 && state.pageData.has(0)")
+            assert js("return state.document.issues[0].history.at(-1).from;") == "fixed"
+            assert js("return state.document.issues[0].history.at(-1).previous_result.summary;") == "Test: geometrie opravena"
+            js("elements.fileIssueFilterId.value='active';elements.fileIssueFilterId.dispatchEvent(new Event('change')); ")
+            assert js("return document.querySelectorAll('.file-item').length;") == 2
+            click(f'.scan-pane .issue-box[data-issue-id="{first_id}"] .issue-box-dismiss')
+            wait_for("state.document.issue_counts.fixed === 0 && !state.issueBusy")
             assert js("return document.querySelectorAll('.file-item').length;") == 1
             assert js("return document.querySelector('.file-item').dataset.fileId;") == second.name
-            js("state.issueFilter='all';elements.issueFilterId.value='all';refreshIssueViews();")
+            click(".file-item")
+            wait_for("state.activeFileId === 'second-ocr.pdf' && state.pageData.has(0) && !state.navigating")
+            click("#refreshFolderId")
+            wait_for("state.activeFileId === 'second-ocr.pdf' && state.pageData.has(0) && !state.navigating")
+            assert js("return state.document.issues[0].status;") == "fixed"
+            assert file_sha256(pdf) == before, "Reviewer changed PDF bytes"
             shot = request("GET", f"/session/{session}/screenshot")
             args.screenshot.write_bytes(base64.b64decode(shot))
             errors = command("/log", {"type": "browser"})
             severe = [e for e in errors if e["level"] == "SEVERE"]
             assert not severe, severe
-            print(f"PASS: real WebUI transport, click/drag, autosave, external edit protection, reload, confirm/advance, reopen, persistence, durable draft recovery, backup selection and multi-PDF review. Screenshot: {args.screenshot}", flush=True)
+            print(f"PASS: real WebUI transport, click/drag, autosave, external edit protection, reload, delete/restore, retained blue marks across external passes, durable draft recovery, backup selection and multi-PDF filters. Screenshot: {args.screenshot}", flush=True)
         finally:
             if session:
                 request("DELETE", f"/session/{session}")

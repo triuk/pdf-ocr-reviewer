@@ -2,32 +2,59 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {app}=require('./harness.cjs');
 
-test('review visits only matching PDFs with fixed issues and stops when none remain',async()=>{
+function issue(id,status,page=0) {return {id,status,page_index:page,bbox:[0,0,1,1]};}
+
+test('retained filters include unrepaired and repaired marks but exclude archived marks',()=>{
   const c=app(['state.js','files.js','issues.js']);
-  c.state.files=[{file_id:'a',name:'1993-a',status:'unreviewed',issue_counts:{fixed:0}},
-    {file_id:'b',name:'1992-b',status:'unreviewed',issue_counts:{fixed:1}},
-    {file_id:'c',name:'1993-c',status:'unreviewed',issue_counts:{fixed:1}}];
-  c.state.activeFileId='a';c.state.document={issues:[]};
+  c.state.document.issues=[issue('new','open',1),issue('repaired','fixed'),
+    issue('accepted-in-old-version','verified'),issue('deleted','dismissed')];
+  assert.deepEqual(Array.from(c.filteredIssues(),i=>i.id),['repaired','new']);
+  c.state.issueFilter='archived';
+  assert.deepEqual(Array.from(c.filteredIssues(),i=>i.id),['accepted-in-old-version','deleted']);
+  c.state.files=[{file_id:'a',name:'1993-a',status:'unreviewed',issue_counts:{fixed:1}},
+    {file_id:'b',name:'1993-b',status:'unreviewed',issue_counts:{open:1}},
+    {file_id:'c',name:'1993-c',status:'unreviewed',issue_counts:{verified:1,dismissed:1}},
+    {file_id:'d',name:'1992-d',status:'unreviewed',issue_counts:{fixed:1}}];
   c.elements.nameFilterId={value:'1993'};c.elements.statusFilterId={value:'all'};
-  c.elements.fileIssueFilterId={value:'fixed'};c.elements.issueFilterId={value:'all'};
-  const opened=[];const selected=[];
-  c.openDocumentF=async id=>{opened.push(id);c.state.activeFileId=id;c.state.document={issues:[{id:'fix-c',status:'fixed',page_index:0,bbox:[0,0,1,1]}]};return true;};
-  c.selectIssue=async id=>selected.push(id);
-  assert.equal(await c.advanceToNextFixed(),true);
-  assert.deepEqual(opened,['c']);assert.deepEqual(selected,['fix-c']);
-  c.state.document.issues[0].status='verified';c.state.files[2].issue_counts.fixed=0;
-  assert.equal(await c.advanceToNextFixed(),false);
-  assert.deepEqual(opened,['c']);
+  c.elements.fileIssueFilterId={value:'active'};
+  assert.deepEqual(Array.from(c.filteredFiles(),i=>i.file_id),['a','b']);
+  c.elements.fileIssueFilterId.value='fixed';
+  assert.deepEqual(Array.from(c.filteredFiles(),i=>i.file_id),['a']);
 });
 
-test('remaining fixes in the current document take precedence and stale targets remain visible',async()=>{
-  const c=app(['state.js','files.js','issues.js']);
-  c.elements.nameFilterId={value:''};c.elements.statusFilterId={value:'all'};
-  c.elements.fileIssueFilterId={value:'all'};c.elements.issueFilterId={value:'all'};
-  c.state.files=[{file_id:'a.pdf',name:'a.pdf',status:'unreviewed',issue_counts:{fixed:2}}];
-  c.state.document.issues=[{id:'later',status:'fixed',page_index:2,bbox:[0,0,1,1]},
-    {id:'stale',status:'fixed',stale:true,page_index:0,bbox:[0,0,1,1]}];
-  let selected;c.selectIssue=async id=>{selected=id;};
-  await c.advanceToNextFixed();assert.equal(selected,'stale');
-  await c.advanceToNextFixed('later');assert.equal(selected,'later');
+test('deleting another repaired box preserves selection; restoring from archive makes it visible',async()=>{
+  const c=app(['state.js','issues.js']);
+  const retained=issue('keep','fixed');const removed=issue('remove','fixed');
+  removed.result={summary:'Prior external repair'};removed.history=[{action:'fixed'}];
+  c.state.document.issues=[retained,removed];c.state.selectedIssueId='keep';
+  c.elements.issueFilterId={value:'active'};
+  c.renderIssueEditor=()=>{};c.refreshIssueViews=()=>{};c.flushIssueDraft=async()=>true;
+  const calls=[];
+  c.callBackend=async(name,file,id,patch)=>{
+    calls.push({name,id,patch:JSON.parse(patch)});
+    Object.assign(c.state.document.issues.find(i=>i.id===id),JSON.parse(patch));
+    return {file_id:file,issues:c.state.document.issues,issue_counts:{}};
+  };
+  await c.changeIssueStatus('dismissed','remove');
+  assert.equal(c.state.selectedIssueId,'keep');
+  assert.equal(retained.status,'fixed');
+  assert.equal(removed.status,'dismissed');
+  c.state.issueFilter='archived';c.state.selectedIssueId='remove';
+  await c.changeIssueStatus('open','remove');
+  assert.equal(c.state.issueFilter,'active');
+  assert.equal(c.state.selectedIssueId,'remove');
+  assert.equal(removed.result.summary,'Prior external repair');
+  assert.equal(calls.length,2);
+});
+
+test('browsing repaired marks does not change status and old approval shortcuts do nothing',async()=>{
+  const c=app(['state.js','issues.js']);
+  c.state.document.issues=[issue('later','fixed',2),{...issue('stale','fixed'),stale:true}];
+  const selected=[];c.selectIssue=async id=>{selected.push(id);c.state.selectedIssueId=id;};
+  await c.navigateIssue(1);await c.navigateIssue(1);
+  assert.deepEqual(selected,['stale','later']);
+  for (const key of ['v','c','r']) {
+    assert.equal(c.handleIssueKeyboard({key,preventDefault(){throw Error('Old shortcut still active');}}),false);
+  }
+  assert.ok(c.state.document.issues.every(i=>i.status==='fixed'));
 });

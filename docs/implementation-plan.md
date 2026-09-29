@@ -378,8 +378,8 @@ After each completed unit of work, this README must be updated:
 ### Current work status
 
 ```text
-Phase: review stages 1–5 implemented; waiting for user ergonomics acceptance
-Completed: schema-2 instructions and migration; word/region marks; OCR snapshots and SHA-256 anchors; QA companion references; issue notes, history, filters, counts and colors; confirm/advance, reopen and cancel; external manifest conflict detection and reload
+Phase: review stages 1–5 implemented; workflow simplified after user feedback; awaiting further ergonomics acceptance
+Completed: schema-2 instructions and migration; word/region marks; OCR snapshots and SHA-256 anchors; QA companion references; issue notes, history, filters, counts and colors; delete/restore marks; retained red and blue marks feed external passes; external manifest conflict detection and reload
 Verified: automated backend tests and real WebUI/Chromium smoke workflow on a temporary copy of the supplied four-page OCR PDF
 Next action: user follows ergonomics-acceptance.md; collect feedback before stage 6
 Known limitation: no OCR repair engine inside the reviewer; repairs are performed by the separately instructed external tool
@@ -392,6 +392,7 @@ Known limitation: Windows acceptance and long-document performance remain unveri
 
 | Date | Decision | Reason |
 |---|---|---|
+| 2026-09-29 | Keep red and blue marks for external passes; delete satisfactory results with ×; remove V/C/R approval flow | User wants OCR outside the reviewer, with the manifest as its control file |
 | 2026-09-25 | Schema 2 embeds repair instructions and region issues in the existing manifest | A short range-based prompt can drive targeted external repairs without an export step |
 | 2026-09-25 | Reopen only changes the issue status; fixed awaits human verification | User explicitly requested reopening a comment, not rolling back PDF content |
 | 2026-09-25 | Mark immediately with the remembered kind and review via J/K/C/R | Avoid repeated dialogs and unnecessary clicks |
@@ -413,6 +414,7 @@ Known limitation: Windows acceptance and long-document performance remain unveri
 
 | Date | Work performed | Result |
 |---|---|---|
+| 2026-09-29 | Simplified ergonomics after user feedback: external passes process retained open/fixed marks; × deletes; Archiv restores; built-in instructions migrate to v3 | 68 Python tests, 12 JS scenarios, real Chromium external-pass/delete/restore/recovery flow and source/packaged self-tests passed on Linux; refreshed test binary, user demo data preserved |
 | 2026-09-29 | Implemented review stages 1–5 in separate commits and prepared the ergonomics trial | 66 Python tests, 11 JS scenarios and real Chromium recovery/multi-PDF flow passed on Linux; Windows execution and user acceptance remain pending |
 | 2026-09-29 | Created the post-review work plan and linked the current next step | Seven review findings and testing, recovery, ergonomics and performance improvements are planned; application code unchanged |
 | 2026-09-25 | Generalized the box-size issue label and added an on-box cancel button | Covers undersized boxes and allows one-click cancellation in reading or marking mode |
