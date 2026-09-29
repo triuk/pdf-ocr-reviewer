@@ -378,10 +378,10 @@ After each completed unit of work, this README must be updated:
 ### Current work status
 
 ```text
-Phase: review stages 1–5 implemented; preparing the ergonomics acceptance build
+Phase: review stages 1–5 implemented; waiting for user ergonomics acceptance
 Completed: schema-2 instructions and migration; word/region marks; OCR snapshots and SHA-256 anchors; QA companion references; issue notes, history, filters, counts and colors; confirm/advance, reopen and cancel; external manifest conflict detection and reload
 Verified: automated backend tests and real WebUI/Chromium smoke workflow on a temporary copy of the supplied four-page OCR PDF
-Next action: user ergonomics acceptance before stage 6
+Next action: user follows ergonomics-acceptance.md; collect feedback before stage 6
 Known limitation: no OCR repair engine inside the reviewer; repairs are performed by the separately instructed external tool
 Known limitation: external writers must use the shared revision-checked writer; direct unrelated writes cannot be locked cooperatively
 Known limitation: stale regions must be marked again; no automatic relocation across changed PDFs
@@ -413,6 +413,7 @@ Known limitation: Windows acceptance and long-document performance remain unveri
 
 | Date | Work performed | Result |
 |---|---|---|
+| 2026-09-29 | Implemented review stages 1–5 in separate commits and prepared the ergonomics trial | 66 Python tests, 11 JS scenarios and real Chromium recovery/multi-PDF flow passed on Linux; Windows execution and user acceptance remain pending |
 | 2026-09-29 | Created the post-review work plan and linked the current next step | Seven review findings and testing, recovery, ergonomics and performance improvements are planned; application code unchanged |
 | 2026-09-25 | Generalized the box-size issue label and added an on-box cancel button | Covers undersized boxes and allows one-click cancellation in reading or marking mode |
 | 2026-09-25 | Added region review, schema migration, repair contract, revision guards, colors and keyboard workflow | Backend tests and real WebUI browser smoke pass; original PDF unchanged |

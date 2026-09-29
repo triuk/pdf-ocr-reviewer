@@ -98,10 +98,9 @@ repair contract, so a tool with access to the folder can receive this short prom
 > Podle `pdf-ocr-reviewer.manifest.json` oprav otevřené připomínky u PDF od `XXX.pdf` po `YYY.pdf` včetně.
 
 The reviewer does not run OCR or modify PDFs itself. After an external repair,
-click **Načíst opravy** to reread both the manifest and the PDF. Close the reviewer
-during a repair batch when possible; if its loaded manifest has changed externally,
-it refuses to overwrite it. Unsaved issue drafts remain in the current session if
-a save fails. A stale PDF anchor is visibly flagged and cannot be confirmed: mark
+click **Načíst opravy** to reread both the manifest and the PDF. External writers use the shared revision-checked writer described in the
+manifest instructions; a changed revision is rejected under the writer lock. Unsaved notes are journaled locally and can be recovered after restart;
+the recovery panel compares them with the current manifest before applying them. A stale PDF anchor is visibly flagged and cannot be confirmed: mark
 the current location again and cancel the obsolete mark. QA PASS reports remain
 evidence only for the PDF hash they originally checked.
 
@@ -116,6 +115,7 @@ python tools/smoke_region_review.py --pdf /path/to/sample-ocr.pdf
 
 ```bash
 python -m pip install -r requirements-build.txt
+python main.py --self-test
 pyinstaller --noconfirm --clean pdf-ocr-reviewer.spec
 ```
 
@@ -134,5 +134,6 @@ The result is `dist/pdf-ocr-reviewer` on Linux or `dist/pdf-ocr-reviewer.exe` on
 - [Rendered page transport](docs/page-transport.md)
 - [Implementation plan, tests, work status, and next steps](docs/implementation-plan.md)
 - [Post-review work plan (2026-09-29)](docs/review-work-plan.md)
+- [Ergonomics acceptance test](docs/ergonomics-acceptance.md)
 
 Detailed work status, the decision log, and the exact next step are maintained in the second document so development can resume after an interruption without reconstructing prior work from memory.

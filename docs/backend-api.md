@@ -69,3 +69,28 @@ On error:
 The frontend does not branch on the error text, but on the stable `code`.
 
 ---
+
+
+## Request context and recovery (2026-09-29)
+
+`syncStateB` returns `context_id` for the current folder session, and
+`openDocumentB` returns `document_id` for the active PDF instance. All original
+callbacks except `syncStateB` take one additional final JSON string argument:
+`{"context_id":"...","document_id":"..."}`. Folder operations validate the
+folder session; document-bound mutations and render requests also validate the
+active document and requested file. A rejected request returns `STALE_CONTEXT`.
+The frontend serializes navigation and ignores responses from superseded contexts.
+
+Local recovery callbacks are independent of the currently selected document:
+
+- `saveDraftB(draft_json)` journals a draft with folder, fileId, optional issueId,
+  token, note, base_note, expected_sha256 and optional kind/base_kind/base_revision.
+- `deleteDraftB(token)` acknowledges only that draft version.
+- `listBackupsB(folder)` returns valid backup choices and the observed manifest revision.
+- `restoreBackupB(folder, backup_id, expected_revision_json)` restores under the
+  writer lock and returns the reopened folder state. The replaced bytes are retained.
+
+Folder state includes recovered `drafts` and a possible `draft_error`; a broken
+local recovery database is never silently replaced. Draft storage does not alter
+the shared manifest. The manifest writer requires an explicit expected revision;
+see `region-review.md` for the external CLI protocol.

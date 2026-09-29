@@ -1,7 +1,8 @@
 # Plán práce po code review
 
 Datum: 2026-09-29. Výchozí revize: `02afcfb` (`v0.1.4`).
-Stav: probíhá implementace etap 1–5 do uživatelské zkoušky ergonomie.
+Stav: etapy 1–5 implementovány; čeká se na [uživatelskou zkoušku ergonomie](ergonomics-acceptance.md).
+Windows ověření zámků zůstává otevřené; připraveny jsou CI testy pro obě platformy.
 
 Plán pokrývá sedm nálezů z celkového code review a navržená vylepšení
 testování, ergonomie, zotavení po chybě a výkonu. Nejvyšší prioritu má
@@ -176,8 +177,9 @@ za hotovou funkci bez ověření.
 Etapy 1–3 tvoří první celek oprav potvrzených chyb. Etapy 4–6 přidávají
 odsouhlasená vylepšení. Etapa 7 je společná podmínka vydání.
 
-Nejbližší konkrétní krok: přidat regresní test souběžného zápisu manifestu,
-navrhnout společné rozhraní zápisového helperu a jeho zámku a začít etapou 1.
+Nejbližší konkrétní krok: uživatelská zkouška podle `ergonomics-acceptance.md`.
+Po její zpětné vazbě opravit případné nedostatky ovládání a dohodnout pokračování
+etapami 6–7. Změny jsou rozděleny do samostatných commitů.
 
 Výchozí ověření z code review 2026-09-28: 42 úspěšných Python testů,
 aplikační self-test a prohlížečový smoke test na dočasné kopii dodaného PDF.

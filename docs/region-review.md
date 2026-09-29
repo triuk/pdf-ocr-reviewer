@@ -72,8 +72,8 @@ previous attempt, not a resolution of the new request.
 The application hashes PDFs when opening them and checks the active hash before
 saving issue changes. It detects stale targets, but does not guess their new
 locations. Human confirmation of a stale target is blocked. Manifest replacement
-detection is optimistic concurrency protection, not a multiwriter database lock;
-avoid simultaneous writing by external tools and the reviewer.
+uses an expected revision checked under the cooperative writer lock described
+below. External writers must use the same helper to participate in that protection.
 
 ## Cooperative writer protocol (instructions version 2)
 
