@@ -2,10 +2,15 @@ import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_all
+from webui.load_library import _get_library_path
 
 
 ROOT = Path(SPECPATH).resolve()
 
+# The webui2 wheel may omit the Linux clang runtime selected by its loader.
+# Fail here instead of shipping a binary that tries downloading it on first run.
+if not Path(_get_library_path()).is_file():
+    raise RuntimeError("WebUI native runtime missing: run python main.py --self-test in the build environment first.")
 webui_datas, webui_binaries, webui_hiddenimports = collect_all("webui")
 
 datas = [

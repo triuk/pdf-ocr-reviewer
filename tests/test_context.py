@@ -57,3 +57,18 @@ def test_stale_folder_and_document_callbacks_do_not_write(tmp_path):
     callback(event)
     assert event.result['ok']
     api.close()
+
+
+@pytest.mark.parametrize('field,value', [('page_index', 100), ('page_width', 12345)])
+def test_invalid_fixed_target_cannot_be_confirmed(tmp_path, field, value):
+    create_pdf(tmp_path / 'a.pdf')
+    api = BackendApi(tmp_path)
+    opened = api.open_document('a.pdf')
+    sha = opened['ocr_sha256']
+    issue_id = api.add_issue('a.pdf', {'page_index':0, 'bbox':[20,20,60,60], 'kind':'position', 'expected_sha256':sha})['issue_id']
+    issue = api.manifest['files']['a.pdf']['issues'][0]
+    issue.update({field:value, 'status':'fixed', 'result':{'summary':'test','before_sha256':sha,'after_sha256':sha,'at':'2026-09-29T12:00:00+02:00'}})
+    assert api._issue_state('a.pdf')['issues'][0]['invalid_target']
+    with pytest.raises(ValueError, match='stránce'):
+        api.update_issue('a.pdf', issue_id, {'status':'verified','expected_sha256':sha})
+    api.close()
