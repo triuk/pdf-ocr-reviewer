@@ -22,6 +22,7 @@ const state = {
   objectUrls: new Map(),
   pendingRequests: new Map(),
   generation: 0,
+  renderGeneration: 0,
   applyingState: false,
   observer: null,
   visiblePages: new Set(),

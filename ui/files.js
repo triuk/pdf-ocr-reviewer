@@ -1,12 +1,15 @@
-function renderFileList() {
+function filteredFiles() {
   const nameFilter = elements.nameFilterId.value.trim().toLocaleLowerCase("cs");
   const statusFilter = elements.statusFilterId.value;
-  const visible = state.files.filter((file) => {
+  return state.files.filter((file) => {
     const nameMatch = !nameFilter || file.name.toLocaleLowerCase("cs").includes(nameFilter);
     const statusMatch = statusFilter === "all" || file.status === statusFilter;
     return nameMatch && statusMatch;
   });
+}
 
+function renderFileList() {
+  const visible = filteredFiles();
   elements.fileListId.replaceChildren();
   for (const file of visible) {
     const button = document.createElement("button");

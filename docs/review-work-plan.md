@@ -76,14 +76,14 @@ otevření odpovídají zobrazený dokument, jeho ovládání a backend stejném
 
 Priorita: střední. Řeší nálezy 5 a 6. Navazuje na kontext požadavků z etapy 2.
 
-- [ ] Sdílet výběr souborů mezi seznamem, šipkami a automatickým přechodem.
+- [x] Sdílet výběr souborů mezi seznamem, šipkami a automatickým přechodem.
       Zohlednit aktivní filtry, prázdný výsledek i soubor, který po změně stavu
       z právě použitého filtru zmizí.
-- [ ] Zavést revizi renderu nebo explicitní požadované rozlišení. Změna zoomu
+- [x] Zavést revizi renderu nebo explicitní požadované rozlišení. Změna zoomu
       zneplatní rozpracované obrázky v nesprávném rozlišení a zajistí nové načtení.
-- [ ] Zachovat správnou polohu OCR a připomínek při změně zoomu; staré výsledky
+- [x] Zachovat správnou polohu OCR a připomínek při změně zoomu; staré výsledky
       nesmějí nahrazovat novější ani hromadit Blob URL.
-- [ ] Přidat testy kombinovaných filtrů, automatického přechodu, rychlých
+- [x] Přidat testy kombinovaných filtrů, automatického přechodu, rychlých
       změn zoomu a zpožděných obrazových paketů.
 
 Hotovo, když navigace prochází pouze odpovídající soubory a po dokončení

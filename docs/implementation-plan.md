@@ -378,10 +378,10 @@ After each completed unit of work, this README must be updated:
 ### Current work status
 
 ```text
-Phase: safe writer and document request context implemented; filters and render revisions next
+Phase: review stages 1–3 implemented and regression-tested; recovery next
 Completed: schema-2 instructions and migration; word/region marks; OCR snapshots and SHA-256 anchors; QA companion references; issue notes, history, filters, counts and colors; confirm/advance, reopen and cancel; external manifest conflict detection and reload
 Verified: automated backend tests and real WebUI/Chromium smoke workflow on a temporary copy of the supplied four-page OCR PDF
-Next action: implement review-work-plan.md stage 3 (filtered navigation and zoom request invalidation)
+Next action: implement review-work-plan.md stage 4 (backups and durable note drafts)
 Known limitation: no OCR repair engine inside the reviewer; repairs are performed by the separately instructed external tool
 Known limitation: external writers must use the shared revision-checked writer; direct unrelated writes cannot be locked cooperatively
 Known limitation: stale regions must be marked again; no automatic relocation across changed PDFs

@@ -9,12 +9,13 @@ async function requestPage(pageIndex) {
   const uniquePart = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
   const requestId = `${state.generation}:${pageIndex}:${uniquePart}`;
   const generation = state.generation;
-  state.pendingRequests.set(requestId, { pageIndex, generation: state.generation });
+  const renderGeneration = state.renderGeneration;
+  state.pendingRequests.set(requestId, { pageIndex, generation: state.generation, renderGeneration, targetWidth });
   try {
     await callBackend("requestPageB", requestId, state.document.file_id, pageIndex, targetWidth);
   } catch (error) {
     state.pendingRequests.delete(requestId);
-    if (generation === state.generation) showToast(error.message, true);
+    if (generation === state.generation && renderGeneration === state.renderGeneration) showToast(error.message, true);
   }
 }
 
@@ -30,7 +31,7 @@ function pageReadyF(rawData) {
     const header = JSON.parse(new TextDecoder().decode(bytes.subarray(headerStart, headerEnd)));
     const pending = state.pendingRequests.get(header.request_id);
     state.pendingRequests.delete(header.request_id);
-    if (!pending || pending.generation !== state.generation || header.file_id !== state.activeFileId) return;
+    if (!pending || pending.generation !== state.generation || pending.renderGeneration !== state.renderGeneration || header.file_id !== state.activeFileId) return;
 
     const imageBytes = bytes.subarray(headerEnd);
     const blob = new Blob([imageBytes], { type: header.mime });
@@ -263,6 +264,8 @@ function applyZoom(reloadVisiblePages = true) {
   if (!elements.pagesId) return;
   elements.pagesId.style.width = `${state.ui.zoom_percent}%`;
   if (!reloadVisiblePages || !state.document) return;
+  state.renderGeneration += 1;
+  state.pendingRequests.clear();
   const visible = [...state.visiblePages];
   for (const pageIndex of [...state.pageData.keys()]) unloadPage(pageIndex);
   for (const pageIndex of visible) requestPage(pageIndex);

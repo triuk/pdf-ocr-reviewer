@@ -3,18 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-function app(files = ['state.js', 'workflow.js']) {
-  const noop = () => {};
-  const c = vm.createContext({console, setTimeout, clearTimeout, window:{setTimeout, clearTimeout},
-    document:{addEventListener:noop, querySelectorAll:()=>[]}, URL:{revokeObjectURL:noop},
-    requestAnimationFrame: cb=>cb()});
-  for (const file of files) vm.runInContext(fs.readFileSync(path.join(__dirname,'../../ui',file),'utf8'), c);
-  c.state = vm.runInContext('state', c); c.elements = vm.runInContext('elements', c);
-  c.showToast=noop;c.renderFileList=noop;c.setSaveState=noop;
-  c.state.contextId='folder-A';c.state.activeFileId='a.pdf';c.state.document={document_id:'doc-A',file_id:'a.pdf'};
-  return c;
-}
-function deferred() {let resolve; const promise=new Promise(r=>resolve=r);return {promise,resolve};}
+const {app,deferred}=require('./harness.cjs');
 const ok = data=>JSON.stringify({ok:true,data});
 
 test('late status response cannot mark the newly opened PDF', async()=>{
@@ -60,4 +49,3 @@ test('navigation operations execute in order', async()=>{
   await Promise.resolve();assert.deepEqual(order,['a-start']);d.resolve();await Promise.all([a,b]);
   assert.deepEqual(order,['a-start','a-end','b']);assert.equal(c.state.navigating,false);
 });
-module.exports={app,deferred};

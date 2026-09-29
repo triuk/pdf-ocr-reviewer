@@ -113,7 +113,7 @@ def main():
             assert js("return elements.issueKindId.selectedOptions[0].textContent;") == "Špatná velikost boxu"
             point = js("const o=state.pageData.get(0).header.ocr; const w=o.layout_items[0]; const p=document.querySelector('.scan-pane').getBoundingClientRect(); return [p.left+(w.x0+w.x1)/2/o.page_width*p.width,p.top+(w.y0+w.y1)/2/o.page_height*p.height];")
             pointer(*point)
-            wait_for("state.document.issues.length === 1")
+            wait_for("state.document?.issues.length === 1")
             assert js("return state.document.issues[0].kind;") == "oversized"
             first_id = js("return state.selectedIssueId;")
             js("elements.issueNoteId.value='Text je správně; zmenšit box.'; elements.issueNoteId.dispatchEvent(new Event('input',{bubbles:true}));")
@@ -121,7 +121,7 @@ def main():
             # Drag a blank region: this also supports missing OCR with no selectable word.
             rect = js("const r=document.querySelector('.scan-pane').getBoundingClientRect();return [r.left+15,r.top+20,r.left+85,r.top+45];")
             pointer(rect[0], rect[1], rect[2:])
-            wait_for("state.document.issues.length === 2")
+            wait_for("state.document?.issues.length === 2")
             second_id = js("return state.selectedIssueId;")
             assert load_manifest(folder)["files"][pdf.name]["issues"][1]["targets"] == []
             # Changing render settings must not accumulate pointer handlers.
@@ -131,22 +131,22 @@ def main():
             wait_for("state.pageData.has(0)")
             rect = js("const r=document.querySelector('.scan-pane').getBoundingClientRect();return [r.left+160,r.top+15,r.left+220,r.top+30];")
             pointer(rect[0], rect[1], rect[2:])
-            wait_for("state.document.issues.length === 3")
+            wait_for("state.document?.issues.length === 3")
             third_id = js("return state.selectedIssueId;")
             # The on-box cross also works on an unselected issue without changing selection.
             js(f"selectIssue({json.dumps(second_id)}, false);")
             wait_for("state.selectedIssueId === " + json.dumps(second_id))
             click(f'.scan-pane .issue-box[data-issue-id="{third_id}"] .issue-box-dismiss')
-            wait_for("state.document.issue_counts.dismissed === 1")
+            wait_for("state.document?.issue_counts.dismissed === 1")
             assert js("return state.selectedIssueId;") == second_id
             js("state.issueFilter='dismissed';elements.issueFilterId.value='dismissed';renderIssueSidebar();")
             click(".issue-list-item")
             click("#reopenIssueId")
-            wait_for("state.document.issue_counts.dismissed === 0")
+            wait_for("state.document?.issue_counts.dismissed === 0")
             # It also works in reading mode without entering marking mode or the editor.
             js("setMarking(false);")
             click(f'.scan-pane .issue-box[data-issue-id="{third_id}"] .issue-box-dismiss')
-            wait_for("state.document.issue_counts.dismissed === 1")
+            wait_for("state.document?.issue_counts.dismissed === 1")
             assert js("return state.document.issues.length;") == 3
             js("state.issueFilter='active';elements.issueFilterId.value='active';renderIssueSidebar();elements.zoomId.value='100';elements.zoomId.dispatchEvent(new Event('change')); ")
             wait_for("state.pageData.has(0)")
@@ -165,12 +165,12 @@ def main():
             time.sleep(0.65)
             assert (folder / MANIFEST_FILENAME).read_bytes() == external_bytes, "UI overwrote external repair"
             click("#refreshFolderId")
-            wait_for("state.document.issue_counts.fixed === 2 && state.pageData.has(0)")
+            wait_for("state.document?.issue_counts.fixed === 2 && state.pageData.has(0)")
             assert js("return state.issueKind;") == "oversized"
             js(f"selectIssue({json.dumps(second_id)},false);")
             wait_for("!elements.verifyIssueId.hidden")
             click("#verifyIssueId")
-            wait_for("state.document.issue_counts.verified === 1 && state.selectedIssueId !== " + json.dumps(second_id))
+            wait_for("state.document?.issue_counts.verified === 1 && state.selectedIssueId !== " + json.dumps(second_id))
             assert js("return selectedIssue().id;") == first_id
             click("#reopenIssueId")
             wait_for("selectedIssue().status === 'open'")

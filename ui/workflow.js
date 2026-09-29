@@ -147,16 +147,13 @@ function scrollToSavedPage(pageIndex) {
 }
 
 async function moveDocument(direction, unreviewedOnly = false) {
-  if (!state.files.length) return;
-  const currentIndex = Math.max(0, state.files.findIndex((file) => file.file_id === state.activeFileId));
-  for (let step = 1; step <= state.files.length; step += 1) {
-    const index = (currentIndex + direction * step + state.files.length) % state.files.length;
-    const candidate = state.files[index];
-    if (!unreviewedOnly || candidate.status === "unreviewed") {
-      await openDocumentF(candidate.file_id);
-      return;
-    }
-  }
+  const candidates = filteredFiles().filter(file => !unreviewedOnly || file.status === "unreviewed");
+  if (!candidates.length) return;
+  const currentIndex = state.files.findIndex(file => file.file_id === state.activeFileId);
+  if (direction < 0) candidates.reverse();
+  const after = candidates.find(file => direction * (state.files.indexOf(file) - currentIndex) > 0);
+  const next = after || candidates[0];
+  if (next.file_id !== state.activeFileId) await openDocumentF(next.file_id);
 }
 
 function movePage(direction) {
