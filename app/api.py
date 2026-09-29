@@ -5,11 +5,13 @@ import csv
 import io
 import json
 import threading
+import sqlite3
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .drafts import DraftStore
 from .folder_dialog import FolderDialogError, select_folder
 from .folder_scanner import FolderScanError, scan_pdf_folder
 from .manifest import (
@@ -19,6 +21,8 @@ from .manifest import (
     manifest_revision,
     save_manifest,
     validate_manifest,
+    list_backups,
+    restore_backup,
 )
 from .models import VALID_FILE_STATUSES, VALID_OCR_MODES, FileIdentity, ScannedPdf
 from .pdf_document import PdfDocument, PdfDocumentError
@@ -29,6 +33,7 @@ from .review import ISSUE_KINDS, companion_resources, file_sha256, issue_counts,
 class BackendApi:
     def __init__(self, initial_folder: Path | None = None):
         self._lock = threading.RLock()
+        self.drafts = DraftStore()
         self.current_folder: Path | None = None
         self.files: dict[str, ScannedPdf] = {}
         self.manifest: dict[str, Any] | None = None
@@ -67,6 +72,10 @@ class BackendApi:
             "updateIssueB": (3, self.update_issue_callback),
         }
         window.bind("syncStateB", self.sync_state_callback)
+        window.bind("saveDraftB", self.save_draft_callback)
+        window.bind("deleteDraftB", self.delete_draft_callback)
+        window.bind("listBackupsB", self.list_backups_callback)
+        window.bind("restoreBackupB", self.restore_backup_callback)
         document_bound = {"requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"}
         for name, (argc, callback) in bindings.items():
             window.bind(name, self._context_callback(callback, argc, name in document_bound, 1 if name == "requestPageB" else 0))
@@ -86,6 +95,43 @@ class BackendApi:
                     return
                 callback(event)
         return guarded
+
+    def save_draft_callback(self, event):
+        try:
+            self.drafts.put(json.loads(event.get_string_at(0)))
+            event.return_string(self._ok({}))
+        except (ValueError, OSError, sqlite3.Error) as exc:
+            event.return_string(self._error("DRAFT_SAVE_FAILED", f"Koncept se nepodařilo uložit lokálně: {exc}"))
+
+    def delete_draft_callback(self, event):
+        try:
+            self.drafts.remove(event.get_string_at(0))
+            event.return_string(self._ok({}))
+        except (ValueError, OSError, sqlite3.Error) as exc:
+            event.return_string(self._error("DRAFT_SAVE_FAILED", str(exc)))
+
+    def list_backups_callback(self, event):
+        try:
+            folder = Path(event.get_string_at(0)).expanduser().resolve()
+            event.return_string(self._ok({"folder": str(folder), "revision": manifest_revision(folder), "backups": list_backups(folder)}))
+        except (OSError, ValueError, ManifestError) as exc:
+            event.return_string(self._error("BACKUP_LIST_FAILED", str(exc)))
+
+    def restore_backup_callback(self, event):
+        try:
+            folder = Path(event.get_string_at(0)).expanduser().resolve()
+            revision = json.loads(event.get_string_at(2))
+            with self._lock:
+                restore_backup(folder, event.get_string_at(1), expected_revision=revision)
+                event.return_string(self._ok(self.open_folder(folder)))
+        except (OSError, ValueError, ManifestError, FolderScanError) as exc:
+            event.return_string(self._error("BACKUP_RESTORE_FAILED", str(exc)))
+
+    def _draft_state(self):
+        try:
+            return {"drafts": self.drafts.list(self.current_folder) if self.current_folder else [], "draft_error": None}
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            return {"drafts": [], "draft_error": f"Obnovené poznámky nelze načíst: {exc}"}
 
     def sync_state_callback(self, event: Any) -> None:
         event.return_string(self._ok(self.public_state()))
@@ -262,6 +308,7 @@ class BackendApi:
                 "page_count": self.active_document.page_count,
                 "pages": [item.to_dict() for item in pages],
                 "document_id": self.document_id,
+                "manifest_revision": self._manifest_revision,
                 "status": entry.get("status", "unreviewed"),
                 "last_page": entry.get("last_page", 0),
                 "problem_pages": entry.get("problem_pages", []),
@@ -528,6 +575,7 @@ class BackendApi:
         return {
             "folder": str(self.current_folder) if self.current_folder else None,
             "context_id": self.context_id,
+            **self._draft_state(),
             "files": [
                 pdf.to_public_dict(entries.get(pdf.file_id))
                 for pdf in self.files.values()

@@ -14,6 +14,7 @@ async function openDocumentNow(fileId, afterReload = false) {
     releasePageResources();
     state.activeFileId = fileId;
     state.document = documentData;
+    restoreDocumentDrafts();
     state.selectedIssueId = null;
     if (documentData.persistence_error) setSaveState(documentData.persistence_error.message, true);
     else setSaveState("Manifest is writable", false);
@@ -30,6 +31,7 @@ async function openDocumentNow(fileId, afterReload = false) {
     if (file) { file.issue_counts = documentData.issue_counts; file.status = documentData.status; }
     renderFileList();
     refreshIssueViews();
+    renderDraftRecovery();
 
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     if (generation === state.generation) scrollToSavedPage(documentData.last_page || 0);

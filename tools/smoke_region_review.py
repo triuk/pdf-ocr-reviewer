@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -45,6 +46,7 @@ def main():
                 for index in range(30):
                     page.insert_text((50, 80 + index * 20), f"OCR review sample line {index + 1}", fontsize=12)
                 doc.save(pdf)
+        os.environ["PDF_OCR_REVIEWER_STATE_DIR"] = str(folder / "local-state")
         api = BackendApi(folder)
         window = webui.Window()
         api.bind(window)
@@ -79,7 +81,7 @@ def main():
                 if js(f"return Boolean({script});"):
                     return
                 time.sleep(0.05)
-            raise AssertionError(f"Timed out: {script}; state: {js('return {count:state.document?.issues.length,selected:state.selectedIssueId,marking:state.marking,toast:elements.toastId.textContent};')}")
+            raise AssertionError(f"Timed out: {script}; state: {js('return {count:state.document?.issues.length,selected:state.selectedIssueId,marking:state.marking,journal:state.journalPending,drafts:[...state.draftRecords.values()],toast:elements.toastId.textContent};')}")
 
         def click(selector):
             element = command("/element", {"using": "css selector", "value": selector})
@@ -189,12 +191,35 @@ def main():
             wait_for("state.pageData.has(0) && state.document.issue_counts.open === 1")
             assert next(iter(json.loads((folder / MANIFEST_FILENAME).read_text()))) == "repair_instructions"
             assert js("return state.document.issues.find(i => i.id === " + json.dumps(first_id) + ").note;") == "Text je správně; zmenšit box."
+            wait_for("!state.navigating && state.journalPending === 0")
+            # Durable draft survives a browser restart and a conflicting external note.
+            external = load_manifest(folder)
+            external["files"][pdf.name]["issues"][0]["note"] = "External note retained until explicit recovery"
+            save_manifest(folder, external, expected_revision=manifest_revision(folder))
+            js(f"selectIssue({json.dumps(first_id)}, false);")
+            wait_for("state.selectedIssueId === " + json.dumps(first_id))
+            js("elements.issueNoteId.value='Recovered after restart';elements.issueNoteId.dispatchEvent(new Event('input')); ")
+            wait_for("state.journalPending === 0 && [...state.draftRecords.values()].some(d => d.note === 'Recovered after restart' && d.durable)")
+            time.sleep(0.6)
+            command("/refresh")
+            wait_for("state.document?.issues.length === 3 && !elements.draftRecoveryId.hidden")
+            click("#refreshFolderId")
+            wait_for("!state.navigating && state.document?.issues[0].note.startsWith('External note')")
+            js("elements.draftRecoveryId.open=true;")
+            assert "External note" in js("return elements.draftRecoveryListId.textContent;")
+            assert api.drafts.list(folder)[0]["note"] == "Recovered after restart"
+            click(".recovery-row button")
+            wait_for("state.document?.issues[0].note === 'Recovered after restart' && state.journalPending === 0")
+            assert api.drafts.list(folder) == []
+            click("#backupsId")
+            wait_for("elements.backupDialogId.open && elements.backupSelectId.options.length > 0")
+            click("#closeBackupsId")
             shot = request("GET", f"/session/{session}/screenshot")
             args.screenshot.write_bytes(base64.b64decode(shot))
             errors = command("/log", {"type": "browser"})
             severe = [e for e in errors if e["level"] == "SEVERE"]
             assert not severe, severe
-            print(f"PASS: real WebUI transport, click/drag, autosave, external edit protection, reload, confirm/advance, reopen, persistence. Screenshot: {args.screenshot}", flush=True)
+            print(f"PASS: real WebUI transport, click/drag, autosave, external edit protection, reload, confirm/advance, reopen, persistence, durable draft recovery and backup selection. Screenshot: {args.screenshot}", flush=True)
         finally:
             if session:
                 request("DELETE", f"/session/{session}")

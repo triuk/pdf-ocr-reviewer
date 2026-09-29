@@ -38,6 +38,9 @@ const state = {
   issueSaveTimer: null,
   issueQueue: Promise.resolve(),
   issueBusy: false,
+  draftRecords: new Map(),
+  journalQueue: Promise.resolve(),
+  journalPending: 0,
 };
 
 const elements = {};
@@ -53,7 +56,8 @@ function bindElements() {
     "markIssueId", "issueKindId", "previousIssueId", "nextIssueId", "markHintId",
     "issueEditorId", "selectedIssueTitleId", "selectedIssueKindId", "issueNoteId",
     "issueResultId", "verifyIssueId", "reopenIssueId", "dismissIssueId", "closeIssueId",
-    "issueSaveId", "retryIssueSaveId",
+    "issueSaveId", "retryIssueSaveId", "draftRecoveryId", "draftRecoveryListId", "draftRecoverySummaryId",
+    "backupsId", "backupDialogId", "backupSelectId", "restoreBackupId", "closeBackupsId", "backupDescriptionId",
   ];
   for (const id of ids) elements[id] = document.getElementById(id);
 }
@@ -87,7 +91,7 @@ async function callBackend(name, ...args) {
   const fn = webui[name];
   if (typeof fn !== "function") throw new Error(`Backend function ${name} is unavailable.`);
   const context = captureContext();
-  const contextual = name !== "syncStateB";
+  const contextual = !["syncStateB", "saveDraftB", "deleteDraftB", "listBackupsB", "restoreBackupB"].includes(name);
   const documentBound = ["requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"].includes(name);
   if (contextual) args.push(JSON.stringify({context_id: context.contextId, document_id: context.documentId}));
   const result = parseEnvelope(await fn(...args));
@@ -150,6 +154,7 @@ function applyPublicState(data) {
     state.issueKind = state.ui.issue_kind || "position";
     elements.issueKindId.value = state.issueKind;
     renderFileList();
+    absorbDrafts(data);
   } finally {
     state.applyingState = false;
   }

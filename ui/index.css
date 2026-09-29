@@ -141,7 +141,7 @@ input, select, textarea { background: var(--panel); color: var(--text); padding:
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
 }
 .document-toolbar { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
 #documentMetaId { color: var(--muted); margin-left: 8px; }
@@ -307,3 +307,16 @@ button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2p
   .document-toolbar { flex-wrap: wrap; }
   .issue-editor-fields { grid-template-columns: minmax(0, 1fr); }
 }
+
+.draft-recovery { background: #fff8df; color: #453612; padding: 8px 12px; max-height: 32vh; overflow: auto; }
+.recovery-row { display: grid; gap: 5px; padding: 8px 0; border-bottom: 1px solid #c9b46d; }
+.recovery-row textarea { width: 100%; }
+dialog { max-width: min(680px, 92vw); border: 1px solid var(--border); border-radius: 8px; }
+dialog select { max-width: 100%; margin-bottom: 12px; }
+
+.document-toolbar { grid-row: 1; }
+.issue-toolbar { grid-row: 2; }
+.draft-recovery { grid-row: 3; }
+.column-headings { grid-row: 4; }
+.page-scroll { grid-row: 5; }
+.note-panel { grid-row: 6; }

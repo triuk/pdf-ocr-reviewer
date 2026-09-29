@@ -82,7 +82,11 @@ function scheduleSaveCurrentPage() {
 function scheduleSaveNote() {
   if (!state.activeFileId || state.navigating) return;
   window.clearTimeout(state.saveNoteTimer);
-  state.fileNoteDraft = { folder: state.folder, fileId: state.activeFileId, note: elements.fileNoteId.value };
+  const prior = state.fileNoteDraft;
+  state.fileNoteDraft = { folder: state.folder, fileId: state.activeFileId, note: elements.fileNoteId.value,
+    token: crypto.randomUUID(), base_revision: state.document.manifest_revision, expected_sha256: prior?.expected_sha256 || state.document.ocr_sha256,
+    base_note: prior?.base_note ?? state.document.note, recovered: Boolean(prior?.recovered) };
+  persistDraft(state.fileNoteDraft);
   state.saveNoteTimer = window.setTimeout(flushFileNote, 500);
 }
 
@@ -91,10 +95,14 @@ function flushFileNote() {
   const job = state.fileNoteQueue.then(async () => {
     while (state.fileNoteDraft) {
       const draft = state.fileNoteDraft;
+      if (draft.recovered) return true;
       if (draft.folder !== state.folder) return false;
+      await state.journalQueue;
       try {
         await callBackend("setFileNoteB", draft.fileId, draft.note);
         if (state.fileNoteDraft === draft) state.fileNoteDraft = null;
+        state.document.note = draft.note;
+        forgetDraft(draft);
         setSaveState("Manifest uložen", false);
       } catch (error) { showToast(error.message, true); return false; }
     }
@@ -234,6 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindElements();
   attachEvents();
   attachIssueEvents();
+  attachRecoveryEvents();
   if (typeof webui === "undefined") {
     showToast("The webui.js file was not loaded.", true);
     return;

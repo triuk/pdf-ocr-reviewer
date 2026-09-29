@@ -96,3 +96,23 @@ missing manifest). Both hold `.pdf-ocr-reviewer.manifest.json.lock` across the
 revision check and replacement. Never delete that lock file. A conflict requires
 reading and reconciling the new manifest, not merely substituting its hash.
 Direct writes by unrelated programs do not participate in this protection.
+
+## Recovery
+
+Every successful manifest replacement keeps up to ten previous valid snapshots
+in `.pdf-ocr-reviewer-backups`. **Zálohy** lists them for the folder entered in the
+path field, including when a damaged manifest cannot be opened. Restoration
+checks the revision selected in that dialog and preserves the replaced bytes as
+`.pdf-ocr-reviewer-backups/before-restore.json`. PDF bytes are not changed.
+
+Note drafts are journaled separately in a local SQLite file before manifest
+saving. On Linux the default is `$XDG_STATE_HOME/pdf-ocr-reviewer/drafts.sqlite3`
+(or `~/.local/state/pdf-ocr-reviewer/drafts.sqlite3`); on Windows it is under
+`%LOCALAPPDATA%/pdf-ocr-reviewer`. Tests can override the directory with
+`PDF_OCR_REVIEWER_STATE_DIR`. This local recovery journal is not a repair input.
+
+After reopening a document, **Obnovené poznámky** shows recovered text alongside
+its current saved counterpart. **Použít koncept** explicitly applies it to the
+visible revision; **Ponechat uložené** discards that local draft. Missing files or
+issues keep their drafts available for copying. A successful old save only
+acknowledges its own draft token and cannot erase newer typing.

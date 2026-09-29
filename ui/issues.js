@@ -147,6 +147,7 @@ function renderPageIssues(pageIndex) {
 function refreshIssueViews(includeEditor = true) {
   renderIssueSidebar();
   if (includeEditor) renderIssueEditor();
+  renderDraftRecovery();
   for (const pageIndex of state.pageData.keys()) renderPageIssues(pageIndex);
 }
 
@@ -203,10 +204,12 @@ function queueIssueWork(work) {
 function scheduleIssueDraft() {
   const issue = selectedIssue();
   if (!issue) return;
-  const draft = { fileId: state.activeFileId, issueId: issue.id, expected_sha256: state.document.ocr_sha256,
+  const previous = state.issueDrafts.get(draftKey(state.activeFileId, issue.id));
+  const draft = { folder: state.folder, token: crypto.randomUUID(), base_revision: state.document.manifest_revision, base_note: previous?.base_note ?? issue.note, base_kind: previous?.base_kind ?? issue.kind, recovered: Boolean(previous?.recovered), fileId: state.activeFileId, issueId: issue.id, expected_sha256: state.document.ocr_sha256,
     note: elements.issueNoteId.value, kind: elements.selectedIssueKindId.value };
   const key = draftKey(draft.fileId, draft.issueId);
   state.issueDrafts.set(key, draft);
+  persistDraft(draft);
   elements.issueSaveId.textContent = "Ukládání…";
   window.clearTimeout(state.issueSaveTimer);
   state.issueSaveTimer = window.setTimeout(() => saveIssueDraft(key), 450);
@@ -216,11 +219,14 @@ async function saveIssueDraft(key) {
   return queueIssueWork(async () => {
     while (state.issueDrafts.has(key)) {
       const draft = state.issueDrafts.get(key);
+      if (draft.recovered) return true;
+      await state.journalQueue;
       try {
         const data = await callBackend("updateIssueB", draft.fileId, draft.issueId, JSON.stringify({
           note: draft.note, kind: draft.kind, expected_sha256: draft.expected_sha256,
         }));
         if (state.issueDrafts.get(key) === draft) state.issueDrafts.delete(key);
+        forgetDraft(draft);
         applyIssueResponse(data);
         refreshIssueViews(false);
         if (state.selectedIssueId === draft.issueId) {
@@ -365,12 +371,11 @@ function attachIssueEvents() {
   elements.retryIssueSaveId.addEventListener("click", () => {
     // An explicit retry after reload applies the retained note to the now-visible revision.
     const draft = state.issueDrafts.get(draftKey(state.activeFileId, state.selectedIssueId));
-    if (draft && state.document) draft.expected_sha256 = state.document.ocr_sha256;
-    flushIssueDraft();
+    if (draft && state.document) applyRecoveredDraft(draft);
   });
   elements.closeIssueId.addEventListener("click", () => selectIssue(null, false));
   window.addEventListener("beforeunload", (event) => {
-    if (state.issueDrafts.size || state.fileNoteDraft) { event.preventDefault(); event.returnValue = ""; }
+    if (state.journalPending || [...state.draftRecords.values()].some(draft => !draft.durable)) { event.preventDefault(); event.returnValue = ""; }
   });
   renderIssueSidebar();
 }

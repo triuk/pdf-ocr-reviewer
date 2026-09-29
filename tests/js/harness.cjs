@@ -9,6 +9,7 @@ function app(files = ['state.js', 'workflow.js']) {
   for (const file of files) vm.runInContext(fs.readFileSync(path.join(__dirname,'../../ui',file),'utf8'), c);
   c.state = vm.runInContext('state', c); c.elements = vm.runInContext('elements', c);
   c.showToast=noop;c.renderFileList=noop;c.setSaveState=noop;
+  if (!files.includes("recovery.js")) { c.persistDraft=async()=>{};c.forgetDraft=async()=>{};c.restoreDocumentDrafts=noop;c.renderDraftRecovery=noop; }
   c.state.contextId='folder-A';c.state.activeFileId='a.pdf';c.state.document={document_id:'doc-A',file_id:'a.pdf'};
   return c;
 }

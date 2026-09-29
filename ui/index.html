@@ -12,6 +12,7 @@
   <script src="document.js" defer></script>
   <script src="pages.js" defer></script>
   <script src="issues.js" defer></script>
+  <script src="recovery.js" defer></script>
   <script src="workflow.js" defer></script>
 </head>
 <body>
@@ -20,6 +21,7 @@
     <input id="folderPathId" type="text" spellcheck="false" placeholder="Path to folder with PDFs">
     <button id="openPathId" type="button" class="secondary">Load path</button>
     <button id="refreshFolderId" type="button" class="secondary" title="Znovu načíst manifest i PDF po externí opravě">Načíst opravy</button>
+    <button id="backupsId" type="button" class="secondary">Zálohy</button>
     <button id="exportCsvId" type="button" class="secondary">Export CSV</button>
     <span id="saveStateId" class="save-state">Manifest not open</span>
 
@@ -104,6 +106,10 @@
         <span id="markHintId" class="mark-hint">M: označit slovo kliknutím nebo oblast tažením. Esc: čtení.</span>
       </div>
 
+      <details id="draftRecoveryId" class="draft-recovery" hidden>
+        <summary id="draftRecoverySummaryId"></summary>
+        <div id="draftRecoveryListId"></div>
+      </details>
       <div class="column-headings" aria-hidden="true">
         <span>Scan</span>
         <span>OCR layer</span>
@@ -141,6 +147,13 @@
     </section>
   </main>
 
+  <dialog id="backupDialogId">
+    <h2>Obnova manifestu</h2>
+    <p id="backupDescriptionId"></p>
+    <select id="backupSelectId" aria-label="Záloha manifestu"></select>
+    <div class="issue-actions"><button id="restoreBackupId" type="button">Obnovit vybranou zálohu</button>
+      <button id="closeBackupsId" type="button" class="secondary">Zavřít</button></div>
+  </dialog>
   <div id="toastId" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

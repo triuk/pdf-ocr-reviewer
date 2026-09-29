@@ -93,16 +93,16 @@ načítání viditelné stránky odpovídají poslednímu zoomu.
 
 Priorita: střední. Navazuje na bezpečný zápis a kontext dokumentů.
 
-- [ ] Uchovávat omezený počet ověřených záloh manifestu. Chybný manifest nesmí
+- [x] Uchovávat omezený počet ověřených záloh manifestu. Chybný manifest nesmí
       přepsat poslední použitelnou zálohu; obnova nesmí tiše zahodit novější stav.
-- [ ] Průběžně ukládat rozepsané poznámky do lokálního úložiště aplikace,
+- [x] Průběžně ukládat rozepsané poznámky do lokálního úložiště aplikace,
       nezávislého na dostupnosti sdíleného manifestu a náhodném portu WebUI.
-- [ ] Koncepty jednoznačně přiřadit ke složce, PDF, připomínce a výchozí revizi.
+- [x] Koncepty jednoznačně přiřadit ke složce, PDF, připomínce a výchozí revizi.
       Smazat je teprve po potvrzeném zápisu odpovídajícího obsahu.
-- [ ] Po restartu nabídnout obnovený koncept přímo v příslušném editoru.
+- [x] Po restartu nabídnout obnovený koncept přímo v příslušném editoru.
       Při souběžné úpravě nebo chybějící připomínce zachovat oba texty a umožnit
       jejich vyřešení bez tichého přepsání.
-- [ ] Ověřit restart s neuloženou poznámkou, změnu PDF, chybějící soubor,
+- [x] Ověřit restart s neuloženou poznámkou, změnu PDF, chybějící soubor,
       poškozený manifest a nedostatek oprávnění k zápisu.
 
 Hotovo, když lze obnovit neuložený text i poslední platný manifest a aplikace

@@ -5,6 +5,8 @@ import hashlib
 import json
 import os
 import tempfile
+import re
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -223,6 +225,7 @@ def _write_manifest(folder: Path, manifest: dict[str, Any]) -> str:
             handle.write(serialized)
             handle.flush()
             os.fsync(handle.fileno())
+        _backup_current(folder)
         os.replace(temp_path, target)
         _fsync_directory(folder)
     except OSError as exc:
@@ -245,3 +248,61 @@ def _fsync_directory(folder: Path) -> None:
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
+
+
+def _backup_current(folder: Path) -> None:
+    target = folder / MANIFEST_FILENAME
+    if not target.exists():
+        return
+    raw = target.read_bytes()
+    try:
+        validate_manifest(migrate_manifest(json.loads(raw)))
+    except (ValueError, ManifestError, UnicodeError):
+        return  # A broken source must never displace the last valid backup.
+    backup_folder = folder / ".pdf-ocr-reviewer-backups"
+    backup_folder.mkdir(exist_ok=True)
+    digest = hashlib.sha256(raw).hexdigest()
+    if not any(backup_folder.glob(f"*-{digest}.json")):
+        path = backup_folder / f"{time.time_ns()}-{digest}.json"
+        with path.open("xb") as handle:
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+    backups = sorted(backup_folder.glob("[0-9]*-*.json"), reverse=True)
+    for path in backups[10:]:
+        path.unlink()
+
+
+def list_backups(folder: Path) -> list[dict]:
+    result = []
+    for path in sorted((folder / ".pdf-ocr-reviewer-backups").glob("[0-9]*-*.json"), reverse=True):
+        try:
+            data = migrate_manifest(json.loads(path.read_text(encoding="utf-8")))
+            validate_manifest(data)
+            result.append({"id": path.name, "updated_at": data.get("updated_at"),
+                           "files": len(data["files"]), "issues": sum(len(e.get("issues", [])) for e in data["files"].values())})
+        except (OSError, ValueError, ManifestError):
+            continue
+    return result
+
+
+def restore_backup(folder: Path, backup_id: str, *, expected_revision: str | None) -> str:
+    if not isinstance(backup_id, str) or not re.fullmatch(r"[0-9]+-[a-f0-9]{64}\.json", backup_id):
+        raise ManifestError("Invalid backup ID.")
+    try:
+        with file_lock(folder / f".{MANIFEST_FILENAME}.lock"):
+            if manifest_revision(folder) != expected_revision:
+                raise ManifestError("Manifest se od výběru zálohy změnil. Načtěte seznam znovu.")
+            candidate = migrate_manifest(json.loads((folder / ".pdf-ocr-reviewer-backups" / backup_id).read_text(encoding="utf-8")))
+            validate_manifest(candidate)
+            target = folder / MANIFEST_FILENAME
+            if target.exists():
+                # Also preserve a malformed current file when explicitly restoring.
+                previous = folder / ".pdf-ocr-reviewer-backups" / "before-restore.json"
+                with previous.open("wb") as handle:
+                    handle.write(target.read_bytes())
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            return _write_manifest(folder, candidate)
+    except (OSError, ValueError) as exc:
+        raise ManifestError(f"Zálohu nelze obnovit: {exc}") from exc
