@@ -83,7 +83,8 @@ existing mark. **Esc** returns to ordinary text selection. In Layout mode you ca
 also mark the spatial OCR pane.
 
 The sidebar shows counts and a filterable list. **J/K** move between marks and
-**N** focuses the selected mark's note. Red means **K opravě**, blue means **Po opravě**.
+**N** focuses the selected mark's note; **X** deletes the selected mark, like its
+box cross. Red means **K opravě**, blue means **Po opravě**.
 After checking an external repair, delete a satisfactory mark with the **× directly
 on its box**. Leave an unsatisfactory mark in place for the next external pass;
 no confirmation or reopening is needed. Both red and blue marks remain repair

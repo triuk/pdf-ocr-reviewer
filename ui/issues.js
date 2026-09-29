@@ -119,7 +119,7 @@ function renderPageIssues(pageIndex) {
       dismiss.type = "button";
       dismiss.className = "issue-box-dismiss";
       dismiss.textContent = "×";
-      dismiss.title = "Smazat označení — vyřadit z dalších oprav";
+      dismiss.title = "Smazat označení — vyřadit z dalších oprav (X pro vybrané místo)";
       dismiss.setAttribute("aria-label", `Smazat označení: ${issueKindLabels[issue.kind]}, strana ${pageIndex + 1}`);
       dismiss.addEventListener("pointerdown", (event) => {
         // Keep the note focused until its draft is flushed by the action itself.
@@ -381,6 +381,9 @@ function handleIssueKeyboard(event) {
   else if (key === "[" || key === "k") navigateIssue(-1);
   else if (key === "]" || key === "j") navigateIssue(1);
   else if (key === "n" && selectedIssue()) elements.issueNoteId.focus();
+  else if (key === "x" && ["open", "fixed"].includes(selectedIssue()?.status)) {
+    if (!event.repeat) changeIssueStatus("dismissed");
+  }
   else return false;
   event.preventDefault();
   return true;

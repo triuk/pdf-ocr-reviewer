@@ -33,8 +33,8 @@ ovládání; nejsou dokladem provedené opravy OCR. Původní PDF se nemění.
    Smazaná místa vynechá. Zkušební aplikace sama žádnou OCR opravu nespouští.
 4. **Navigace a obnova:** „Má ponechané připomínky“ filtruje PDF s červenými
    i modrými místy, „Má místa po opravě“ jen PDF s modrými. J/K přechází mezi
-   místy v aktuálním PDF, N otevře poznámku. Omylem smazané označení najdete
-   v „Archiv“ a vrátíte pomocí „Obnovit označení“. Dříve potvrzená označení
+   místy v aktuálním PDF, X smaže vybrané označení, N otevře poznámku.
+   Omylem smazané označení najdete v „Archiv“ a vrátíte pomocí „Obnovit označení“. Dříve potvrzená označení
    ze staré verze jsou také v Archivu a automaticky se neopravují.
 5. **Návrat k práci:** zavřete aplikaci, spusťte ji znovu a zkontrolujte
    ponechaná místa, poznámky a Archiv.

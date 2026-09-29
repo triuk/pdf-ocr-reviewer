@@ -33,6 +33,7 @@ The **Overlay** switch displays semi-transparent OCR objects or their rectangles
 | `F` | fit to width |
 | `Ctrl+G` | go to a specified page |
 | `N` | open or focus the note |
+| `X` | delete the selected mark, like × on its box; recoverable from Archiv |
 | `M` | toggle word/region marking; click a word or drag a rectangle |
 | `Esc` | return to text selection / cancel an active rectangle |
 | `J` / `K` | next / previous issue in the current filter (`]` / `[` also work) |

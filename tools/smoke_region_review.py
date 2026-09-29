@@ -169,9 +169,15 @@ def main():
             click("#refreshFolderId")
             wait_for("state.document?.issue_counts.fixed === 2 && state.pageData.has(0)")
             assert js("return state.issueKind;") == "oversized"
-            # Satisfied: delete the blue mark directly on its box. The other blue
-            # mark remains eligible without a confirm/reopen action.
-            click(f'.scan-pane .issue-box[data-issue-id="{second_id}"] .issue-box-dismiss')
+            # X types normally in the note; outside inputs it acts like the box cross.
+            js(f"selectIssue({json.dumps(second_id)}, false);")
+            wait_for("state.selectedIssueId === " + json.dumps(second_id))
+            js("elements.issueNoteId.focus();elements.issueNoteId.value='';")
+            command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "x"}, {"type": "keyUp", "value": "x"}]}]})
+            wait_for("state.issueDrafts.size === 0 && selectedIssue()?.note === 'x'")
+            assert js("return selectedIssue().status;") == "fixed"
+            js("document.activeElement.blur();")
+            command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "x"}, {"type": "keyUp", "value": "x"}]}]})
             wait_for("state.document?.issue_counts.fixed === 1 && state.document.issue_counts.dismissed === 2")
             assert js("return Boolean(document.querySelector('.scan-pane .issue-fixed'));")
             assert not js("return Boolean(document.querySelector('#verifyIssueId, #reviewRepairsId'));")
@@ -182,7 +188,7 @@ def main():
             assert js("return document.activeElement.id;") == "issueNoteId"
             # All typed data survives refresh and version-3 instructions are first.
             click("#refreshFolderId")
-            wait_for("state.pageData.has(0) && state.document.issue_counts.fixed === 1")
+            wait_for("!state.navigating && state.pageData.has(0) && state.document?.issue_counts.fixed === 1")
             assert next(iter(json.loads((folder / MANIFEST_FILENAME).read_text()))) == "repair_instructions"
             assert js("return state.document.issues.find(i => i.id === " + json.dumps(first_id) + ").note;") == "Text je správně; zmenšit box."
             wait_for("!state.navigating && state.journalPending === 0")
