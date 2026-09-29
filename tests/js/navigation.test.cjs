@@ -2,13 +2,13 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {app}=require('./harness.cjs');
 
-test('navigation combines name and status filters, including a current file leaving the filter',async()=>{
+test('navigation combines name and completion filters, including a current file leaving the filter',async()=>{
   const c=app(['state.js','workflow.js','files.js']);
   c.elements.nameFilterId={value:'1993'};c.elements.statusFilterId={value:'unreviewed'};
-  c.state.files=[{file_id:'a',name:'1993-a',status:'ok'},{file_id:'b',name:'1992-b',status:'unreviewed'},
-    {file_id:'c',name:'1993-c',status:'unreviewed'},{file_id:'d',name:'1993-d',status:'ok'}];
+  c.state.files=[{file_id:'a',name:'1993-a',review_complete:true},{file_id:'b',name:'1992-b',review_complete:false},
+    {file_id:'c',name:'1993-c',review_complete:false},{file_id:'d',name:'1993-d',review_complete:true}];
   c.state.activeFileId='a';let opened;c.openDocumentF=async id=>{opened=id;};
-  await c.moveDocument(1,true);assert.equal(opened,'c');
+  await c.moveDocument(1);assert.equal(opened,'c');
   c.elements.nameFilterId.value='no match';opened=null;
   await c.moveDocument(1);assert.equal(opened,null);
 });

@@ -4,24 +4,16 @@
 
 Each file displays:
 
-- review status;
+- inspection completion (○ unfinished, ✓ completed);
 - name;
 - page count after metadata is loaded;
 - an indication that the file has changed since the last review;
 - number of marked problem pages.
 
-Statuses:
-
-- `unreviewed` – not reviewed;
-- `ok` – OK;
-- `error` – OCR error found;
-- `needs_review` – requires further review.
-
-Above the list:
-
-- text filter by name;
-- filter by status;
-- summary counts of files in each status.
+Above the list are filters by name, inspection completion and retained/repaired
+marks, plus the number of completed inspections. Completion is independent of
+remaining issues. Legacy classifications are preserved in manifest data; only
+older `ok` files default to complete.
 
 ### 4.3 Center and right columns
 

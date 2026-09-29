@@ -12,6 +12,7 @@ const state = {
     ocr_mode: "pdf_order",
     overlay: true,
     status_filter: "all",
+    review_filter: "all",
     name_filter: "",
     auto_advance: true,
     issue_kind: "position",
@@ -39,6 +40,7 @@ const state = {
   issueSaveTimer: null,
   issueQueue: Promise.resolve(),
   issueBusy: false,
+  reviewBusy: false,
   draftRecords: new Map(),
   journalQueue: Promise.resolve(),
   journalPending: 0,
@@ -48,7 +50,7 @@ const elements = {};
 
 function bindElements() {
   const ids = [
-    "selectFolderId", "folderPathId", "openPathId", "refreshFolderId", "exportCsvId", "saveStateId",
+    "selectFolderId", "folderPathId", "openPathId", "refreshFolderId", "exportCsvId", "saveStateId", "moreActionsId", "reviewCompleteId",
     "ocrModeId", "overlayId", "zoomId", "zoomValueId", "nameFilterId",
     "statusFilterId", "fileIssueFilterId", "fileSummaryId", "fileListId", "documentNameId",
     "documentMetaId", "pageScrollId", "emptyStateId", "pagesId",
@@ -93,7 +95,7 @@ async function callBackend(name, ...args) {
   if (typeof fn !== "function") throw new Error(`Backend function ${name} is unavailable.`);
   const context = captureContext();
   const contextual = !["syncStateB", "saveDraftB", "deleteDraftB", "listBackupsB", "restoreBackupB"].includes(name);
-  const documentBound = ["requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"].includes(name);
+  const documentBound = ["requestPageB", "setFileStatusB", "setReviewCompleteB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"].includes(name);
   if (contextual) args.push(JSON.stringify({context_id: context.contextId, document_id: context.documentId}));
   const result = parseEnvelope(await fn(...args));
   if (contextual && (context.contextId !== state.contextId || (documentBound && !contextMatches(context)))) {
@@ -151,7 +153,7 @@ function applyPublicState(data) {
     elements.zoomValueId.value = `${state.ui.zoom_percent} %`;
     applyZoom(false);
     elements.nameFilterId.value = state.ui.name_filter || "";
-    elements.statusFilterId.value = state.ui.status_filter || "all";
+    elements.statusFilterId.value = state.ui.review_filter || "all";
     elements.fileIssueFilterId.value = state.ui.issue_filter || "all";
     state.issueKind = state.ui.issue_kind || "position";
     elements.issueKindId.value = state.issueKind;

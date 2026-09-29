@@ -11,9 +11,9 @@ A functional prototype is implemented:
 - side-by-side display of the scan and OCR layer;
 - OCR layout, PDF order, and geometric order modes;
 - OCR overlay;
-- file statuses, problem pages, notes, and last position;
+- whole-file review completion, problem pages, notes, and last position;
 - atomically written `pdf-ocr-reviewer.manifest.json`;
-- CSV export of review results;
+- backups and CSV export under **Další**;
 - one-click OCR word marks and drag-to-mark regions, with autosaved notes;
 - red/new and blue/repaired regions; keep a mark for another external pass or delete it with ×;
 - schema-2 manifest with repair instructions, SHA-256 anchors, QA references and issue history;
@@ -74,6 +74,20 @@ python -m pip install -r requirements-dev.txt
 pytest
 ```
 
+## Whole-file review
+
+**Zkontrolováno** records that you have finished inspecting the whole PDF, even
+if issues remain. It saves immediately and stays on the current file. The sidebar
+filters and counts distinguish completed and unfinished inspections; issue counts
+remain separate. **Obnovit** reloads external changes. Backups and CSV export are
+under **Další**, which closes after selection, an outside click or Escape.
+
+`review_complete` and `review_completed_at` store completion without overwriting
+legacy `status` or annotations. Older `ok` files start checked; `error`,
+`needs_review` and `unreviewed` start unchecked. Explicitly unchecking overrides
+that initial mapping. Legacy classification stays in the manifest and CSV.
+The old 0–3 classification shortcuts and automatic status advancement are retired.
+
 ## Targeted OCR repairs
 
 Press **M** (or **Označovat**) to mark words with a click or regions with a drag.
@@ -103,7 +117,7 @@ repair contract, so a tool with access to the folder can receive this short prom
 The reviewer does not run OCR or modify PDFs itself. The manifest is the control
 file for the external tool. Each requested pass includes all retained `open` and
 `fixed` marks within the inclusive filename range, once per pass. After an external repair,
-click **Načíst opravy** to reread both the manifest and the PDF. External writers use the shared revision-checked writer described in the
+click **Obnovit** to reread both the manifest and the PDF. External writers use the shared revision-checked writer described in the
 manifest instructions; a changed revision is rejected under the writer lock. Unsaved notes are journaled locally and can be recovered after restart;
 the recovery panel compares them with the current manifest before applying them. A stale PDF anchor is visibly flagged: mark
 the current location again and cancel the obsolete mark. QA PASS reports remain

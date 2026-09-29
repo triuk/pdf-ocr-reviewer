@@ -1,26 +1,23 @@
-async function setFileStatusF(status) {
-  const context = captureContext();
-  if (!state.activeFileId || state.navigating) return;
+async function setReviewCompleteF(complete) {
+  if (!state.document || state.navigating || state.reviewBusy) return;
+  state.reviewBusy = true;
+  const fileId = state.activeFileId;
+  const hash = state.document.ocr_sha256;
+  renderReviewComplete();
   try {
-    await callBackend("setFileStatusB", state.activeFileId, status);
-    const file = state.files.find((item) => item.file_id === state.activeFileId);
-    if (file) {
-      file.status = status;
-      file.changed_since_review = false;
-    }
-    if (state.document) state.document.status = status;
-    setActiveStatus(status);
+    const data = await callBackend("setReviewCompleteB", fileId, JSON.stringify({ complete, expected_sha256: hash }));
+    const file = state.files.find((item) => item.file_id === fileId);
+    if (file) Object.assign(file, data);
+    state.document.review_complete = data.review_complete;
     renderFileList();
-    if (contextMatches(context) && state.ui.auto_advance && status !== "unreviewed") await moveDocument(1, true);
-  } catch (error) {
-    showToast(error.message, true);
-  }
+    setSaveState("Manifest uložen", false);
+  } catch (error) { showToast(error.message, true); }
+  finally { state.reviewBusy = false; renderReviewComplete(); }
 }
 
-function setActiveStatus(status) {
-  document.querySelectorAll(".status-button").forEach((button) => {
-    button.classList.toggle("active", button.dataset.status === status);
-  });
+function renderReviewComplete() {
+  elements.reviewCompleteId.checked = Boolean(state.document?.review_complete);
+  elements.reviewCompleteId.disabled = !state.document || state.reviewBusy;
 }
 
 async function toggleProblemPageF(pageIndex, button) {
@@ -154,8 +151,8 @@ function scrollToSavedPage(pageIndex) {
   scrollPageRowInsideContainer(row);
 }
 
-async function moveDocument(direction, unreviewedOnly = false) {
-  const candidates = filteredFiles().filter(file => !unreviewedOnly || file.status === "unreviewed");
+async function moveDocument(direction) {
+  const candidates = filteredFiles();
   if (!candidates.length) return;
   const currentIndex = state.files.findIndex(file => file.file_id === state.activeFileId);
   if (direction < 0) candidates.reverse();
@@ -177,6 +174,15 @@ function movePage(direction) {
 function handleKeyboard(event) {
   if (state.navigating) return;
   const target = event.target;
+  if (elements.moreActionsId.open) {
+    if (event.key === "Escape") {
+      elements.moreActionsId.open = false;
+      elements.moreActionsId.querySelector("summary").focus();
+      event.preventDefault();
+    }
+    return;
+  }
+  if (document.querySelector("dialog[open]")) return;
   if (event.key === "Escape") {
     setMarking(false);
     if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) target.blur();
@@ -188,10 +194,7 @@ function handleKeyboard(event) {
   else if (event.key === "ArrowUp") { event.preventDefault(); moveDocument(-1); }
   else if (event.key === "PageDown") { event.preventDefault(); movePage(1); }
   else if (event.key === "PageUp") { event.preventDefault(); movePage(-1); }
-  else if (["0", "1", "2", "3"].includes(event.key)) {
-    const status = { "0": "unreviewed", "1": "ok", "2": "error", "3": "needs_review" }[event.key];
-    setFileStatusF(status);
-  } else if (event.code === "Space") {
+  else if (event.code === "Space") {
     event.preventDefault();
     elements.overlayId.checked = !elements.overlayId.checked;
     elements.overlayId.dispatchEvent(new Event("change"));
@@ -228,7 +231,7 @@ function attachEvents() {
   });
   elements.statusFilterId.addEventListener("change", () => {
     renderFileList();
-    saveUiOptions({ status_filter: elements.statusFilterId.value });
+    saveUiOptions({ review_filter: elements.statusFilterId.value });
   });
   elements.fileIssueFilterId.addEventListener("change", () => {
     renderFileList();
@@ -236,8 +239,15 @@ function attachEvents() {
   });
   elements.fileNoteId.addEventListener("input", scheduleSaveNote);
   elements.pageScrollId.addEventListener("scroll", scheduleSaveCurrentPage, { passive: true });
-  document.querySelectorAll(".status-button").forEach((button) => {
-    button.addEventListener("click", () => setFileStatusF(button.dataset.status));
+  elements.reviewCompleteId.addEventListener("change", () => setReviewCompleteF(elements.reviewCompleteId.checked));
+  elements.moreActionsId.addEventListener("click", (event) => {
+    if (event.target.closest("button")) elements.moreActionsId.open = false;
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!elements.moreActionsId.contains(event.target)) elements.moreActionsId.open = false;
+  });
+  elements.moreActionsId.addEventListener("focusout", (event) => {
+    if (!elements.moreActionsId.contains(event.relatedTarget)) elements.moreActionsId.open = false;
   });
   document.addEventListener("keydown", handleKeyboard);
 }

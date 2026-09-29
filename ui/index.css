@@ -131,9 +131,7 @@ input, select, textarea { background: var(--panel); color: var(--text); padding:
 .file-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-item-meta { color: var(--muted); font-size: 12px; }
 .file-status { font-weight: 700; text-align: center; }
-.file-status.ok { color: var(--success); }
-.file-status.error { color: var(--danger); }
-.file-status.needs_review { color: var(--warning); }
+.file-status.reviewed { color: var(--success); }
 .file-changed { color: var(--warning); }
 
 .workspace {
@@ -145,12 +143,6 @@ input, select, textarea { background: var(--panel); color: var(--text); padding:
 }
 .document-toolbar { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
 #documentMetaId { color: var(--muted); margin-left: 8px; }
-.status-buttons { display: flex; gap: 5px; flex-wrap: wrap; }
-.status-button { background: var(--panel-soft); color: var(--text); border-color: var(--border); }
-.status-button.active { outline: 2px solid var(--accent); outline-offset: 1px; }
-.status-ok.active { color: var(--success); }
-.status-error.active { color: var(--danger); }
-.status-review.active { color: var(--warning); }
 .column-headings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 7px 18px; font-weight: 600; background: var(--panel-soft); border-bottom: 1px solid var(--border); }
 .page-scroll {
   min-width: 0;
@@ -324,3 +316,11 @@ dialog select { max-width: 100%; margin-bottom: 12px; }
 .file-issue-filter { margin: 0 10px 8px; max-width: calc(100% - 20px); }
 
 .issue-help { margin: 0; padding: 0 10px 8px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+
+.review-toggle { display: flex; align-items: center; gap: 8px; white-space: nowrap; cursor: pointer; }
+.review-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.review-toggle:has(input:disabled) { opacity: .5; cursor: default; }
+.more-actions { position: relative; }
+.more-actions summary { cursor: pointer; padding: 6px 12px; min-height: 34px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel-soft); }
+.more-actions-panel { position: absolute; top: calc(100% + 5px); right: 0; min-width: 150px; display: grid; gap: 5px; padding: 6px; background: var(--panel); border: 1px solid var(--border); border-radius: 5px; box-shadow: var(--shadow); }
+.more-actions-panel button { text-align: left; white-space: nowrap; }

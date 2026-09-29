@@ -119,6 +119,7 @@ srozumitelně rozlišuje uložený stav, koncept a konflikt.
 - [x] Smazané i dříve potvrzené označení je v Archivu s možností obnovy.
 - [x] Aktualizovat manifestové instrukce a migrovat původní pravidla bez ztráty historie.
 - [x] Ověřit externí výsledek, smazání/obnovu, opakovaný průchod a filtry přes více PDF.
+- [x] Zjednodušit lištu: Obnovit, nezávislé Zkontrolováno, Zálohy/CSV v nabídce Další.
 - [ ] Uživatelsky ověřit zjednodušený postup podle `ergonomics-acceptance.md`.
 
 OCR běží mimo program; reviewer pouze připravuje manifest a načítá výsledky.

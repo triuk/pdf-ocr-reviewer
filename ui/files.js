@@ -4,7 +4,7 @@ function filteredFiles() {
   const issueFilter = elements.fileIssueFilterId?.value || "all";
   return state.files.filter((file) => {
     const nameMatch = !nameFilter || file.name.toLocaleLowerCase("cs").includes(nameFilter);
-    const statusMatch = statusFilter === "all" || file.status === statusFilter;
+    const statusMatch = statusFilter === "all" || (statusFilter === "reviewed" ? file.review_complete : !file.review_complete);
     const count = issueFilter === "active"
       ? (file.issue_counts?.open || 0) + (file.issue_counts?.fixed || 0)
       : (file.issue_counts?.[issueFilter] || 0);
@@ -25,8 +25,9 @@ function renderFileList() {
     button.setAttribute("role", "option");
 
     const status = document.createElement("span");
-    status.className = `file-status ${file.status}`;
-    status.textContent = statusSymbol(file.status);
+    status.className = `file-status ${file.review_complete ? "reviewed" : "unreviewed"}`;
+    status.textContent = file.review_complete ? "✓" : "○";
+    status.title = file.review_complete ? "Zkontrolováno" : "Nekontrolováno";
 
     const name = document.createElement("span");
     name.className = "file-item-name";
@@ -59,15 +60,10 @@ function renderFileList() {
     elements.fileListId.append(button);
   }
 
-  const counts = Object.fromEntries(["unreviewed", "ok", "error", "needs_review"].map((key) => [key, 0]));
-  for (const file of state.files) counts[file.status] = (counts[file.status] || 0) + 1;
+  const completed = state.files.filter(file => file.review_complete).length;
   elements.fileSummaryId.textContent = state.folder
-    ? `${visible.length} / ${state.files.length} PDF · ${counts.unreviewed} nekontrolováno · ${counts.error} chyb`
+    ? `${visible.length} / ${state.files.length} PDF · zkontrolováno ${completed} z ${state.files.length}`
     : "Není otevřená složka.";
-}
-
-function statusSymbol(status) {
-  return { unreviewed: "○", ok: "✓", error: "!", needs_review: "?" }[status] || "○";
 }
 
 function setSaveState(message, isError) {

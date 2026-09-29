@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="cs">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,9 +20,14 @@
     <button id="selectFolderId" type="button">Otevřít složku</button>
     <input id="folderPathId" type="text" spellcheck="false" placeholder="Cesta ke složce s PDF">
     <button id="openPathId" type="button" class="secondary">Načíst cestu</button>
-    <button id="refreshFolderId" type="button" class="secondary" title="Znovu načíst manifest i PDF po externí opravě">Načíst opravy</button>
-    <button id="backupsId" type="button" class="secondary">Zálohy</button>
-    <button id="exportCsvId" type="button" class="secondary">Export CSV</button>
+    <button id="refreshFolderId" type="button" class="secondary" title="Znovu načíst manifest i PDF po externí opravě">Obnovit</button>
+    <details id="moreActionsId" class="more-actions">
+      <summary>Další</summary>
+      <div class="more-actions-panel">
+        <button id="backupsId" type="button" class="secondary">Zálohy</button>
+        <button id="exportCsvId" type="button" class="secondary">Export CSV</button>
+      </div>
+    </details>
     <span id="saveStateId" class="save-state">Manifest není načten</span>
 
     <label class="toolbar-field">
@@ -53,12 +58,10 @@
     <aside class="sidebar">
       <div class="sidebar-tools">
         <input id="nameFilterId" type="search" placeholder="Filtrovat názvy">
-        <select id="statusFilterId">
-          <option value="all">Všechny stavy</option>
+        <select id="statusFilterId" aria-label="Dokončení prohlídky PDF">
+          <option value="all">Všechny prohlídky</option>
           <option value="unreviewed">Nekontrolováno</option>
-          <option value="ok">OK</option>
-          <option value="error">Chyba OCR</option>
-          <option value="needs_review">K revizi</option>
+          <option value="reviewed">Zkontrolováno</option>
         </select>
       </div>
       <select id="fileIssueFilterId" class="file-issue-filter" aria-label="Filtrovat PDF podle připomínek">
@@ -90,12 +93,10 @@
           <strong id="documentNameId">Vyberte PDF</strong>
           <span id="documentMetaId"></span>
         </div>
-        <div class="status-buttons" aria-label="Review status">
-          <button type="button" data-status="unreviewed" class="status-button">0 Nekontrolováno</button>
-          <button type="button" data-status="ok" class="status-button status-ok">1 OK</button>
-          <button type="button" data-status="error" class="status-button status-error">2 Chyba</button>
-          <button type="button" data-status="needs_review" class="status-button status-review">3 Revize</button>
-        </div>
+        <label class="review-toggle" title="Dokončená prohlídka celého PDF. Připomínky mohou zůstat k opravě.">
+          <input id="reviewCompleteId" type="checkbox" disabled>
+          <span>Zkontrolováno</span>
+        </label>
       </div>
 
       <div class="issue-toolbar" aria-label="Označování OCR">

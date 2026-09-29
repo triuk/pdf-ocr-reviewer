@@ -25,10 +25,6 @@ The **Overlay** switch displays semi-transparent OCR objects or their rectangles
 |---|---|
 | `↑` / `↓` | previous or next PDF |
 | `Page Up` / `Page Down` | previous or next page |
-| `1` | mark file as `ok` |
-| `2` | mark file as `error` |
-| `3` | mark file as `needs_review` |
-| `0` | return status to `unreviewed` |
 | `Space` | turn overlay on or off |
 | `F` | fit to width |
 | `Ctrl+G` | go to a specified page |
@@ -43,7 +39,8 @@ Shortcuts do not intercept typing in inputs. Shift + drag marks an area over an
 existing issue. Marking also works in the right-hand Layout pane. Issue colors and
 labels are independent of the ordinary OCR overlay switch.
 
-After marking a file, automatic advancement to the next unreviewed file can be enabled in the settings.
+Use the **Zkontrolováno** checkbox to record a completed whole-file inspection.
+It does not advance to another file. The former 0–3 classification shortcuts are removed.
 
 ---
 

@@ -6,14 +6,16 @@ const path = require('node:path');
 const {app,deferred}=require('./harness.cjs');
 const ok = data=>JSON.stringify({ok:true,data});
 
-test('late status response cannot mark the newly opened PDF', async()=>{
+test('late completion response cannot mark the newly opened PDF', async()=>{
   const c=app();const d=deferred();
-  c.webui={isConnected:()=>true,setFileStatusB:()=>d.promise};
-  c.state.files=[{file_id:'a.pdf',status:'unreviewed'},{file_id:'b.pdf',status:'unreviewed'}];
-  const job=c.setFileStatusF('ok');
-  c.state.activeFileId='b.pdf';c.state.document={document_id:'doc-B',status:'unreviewed'};
-  d.resolve(ok({file_id:'a.pdf',status:'ok'}));await job;
-  assert.equal(c.state.files[1].status,'unreviewed');assert.equal(c.state.document.status,'unreviewed');
+  c.webui={isConnected:()=>true,setReviewCompleteB:()=>d.promise};
+  c.elements.reviewCompleteId={};
+  c.state.files=[{file_id:'a.pdf',review_complete:false},{file_id:'b.pdf',review_complete:false}];
+  const job=c.setReviewCompleteF(true);
+  c.state.activeFileId='b.pdf';c.state.document={document_id:'doc-B',review_complete:false};
+  d.resolve(ok({file_id:'a.pdf',review_complete:true}));await job;
+  assert.equal(c.state.files[1].review_complete,false);assert.equal(c.state.document.review_complete,false);
+  assert.equal(c.elements.reviewCompleteId.checked,false);
 });
 
 test('same name in another folder rejects an old response', async()=>{

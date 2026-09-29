@@ -127,7 +127,7 @@ Direct writes by unrelated programs do not participate in this protection.
 ## Recovery
 
 Every successful manifest replacement keeps up to ten previous valid snapshots
-in `.pdf-ocr-reviewer-backups`. **Zálohy** lists them for the folder entered in the
+in `.pdf-ocr-reviewer-backups`. **Další → Zálohy** lists them for the folder entered in the
 path field, including when a damaged manifest cannot be opened. Restoration
 checks the revision selected in that dialog and preserves the replaced bytes as
 `.pdf-ocr-reviewer-backups/before-restore.json`. PDF bytes are not changed.
@@ -146,8 +146,20 @@ acknowledges its own draft token and cannot erase newer typing.
 
 ## Browsing across files
 
-The PDF filters combine name, file status and issue state. **Má ponechané
+The PDF filters combine name, inspection completion and issue state. **Má ponechané
 připomínky** includes PDFs with red or blue marks; **Má místa po opravě** shows
-PDFs with blue marks. Arrow navigation and file-status auto-advance honor filters.
+PDFs with blue marks. Arrow navigation honors those filters; completion changes stay on the current PDF.
 **J/K** browse marks in the current PDF without changing their status. **N** focuses
-the note. **Načíst opravy** reloads externally saved PDF and manifest changes.
+the note. **Obnovit** reloads externally saved PDF and manifest changes.
+
+## Whole-file completion
+
+`review_complete` records a finished inspection, independently of issue status.
+Checking it does not exclude retained `open`/`fixed` issues from external passes.
+`review_completed_at` records its time. The UI does not overwrite legacy `status`
+or `reviewed_at`; older `ok` entries default to checked and all other legacy states
+default to unchecked. A stored explicit boolean always takes precedence.
+
+`ui.review_filter` stores `all`, `unreviewed` or `reviewed`. Legacy `status_filter`
+and `auto_advance` remain preserved but are not used by the simplified interface.
+CSV keeps its original columns and appends completion and its timestamp.

@@ -169,6 +169,29 @@ def main():
             click("#refreshFolderId")
             wait_for("state.document?.issue_counts.fixed === 2 && state.pageData.has(0)")
             assert js("return state.issueKind;") == "oversized"
+            # Whole-file completion is independent of retained issues and reversible.
+            assert js("return elements.refreshFolderId.textContent;") == "Obnovit"
+            assert not js("return Boolean(document.querySelector('.status-button'));")
+            click("#reviewCompleteId")
+            wait_for("!state.reviewBusy && state.document.review_complete")
+            assert js("return state.document.issue_counts.fixed;") == 2
+            assert load_manifest(folder)["files"][pdf.name]["review_complete"] is True
+            click("#refreshFolderId")
+            wait_for("!state.navigating && state.document?.review_complete && state.pageData.has(0)")
+            assert js("return elements.reviewCompleteId.checked;")
+            click("#reviewCompleteId")
+            wait_for("!state.reviewBusy && !state.document.review_complete")
+            # Menu opens/closes by keyboard, and export remains available through it.
+            click("#moreActionsId summary")
+            assert js("return elements.moreActionsId.open;")
+            command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "\ue00c"}, {"type": "keyUp", "value": "\ue00c"}]}]})
+            assert not js("return elements.moreActionsId.open;")
+            click("#moreActionsId summary")
+            js("window.showSaveFilePicker=async()=>({createWritable:async()=>({write:async text=>{window.exportedCsv=text;},close:async()=>{}})});")
+            click("#exportCsvId")
+            wait_for("typeof window.exportedCsv === 'string'")
+            assert "review_complete" in js("return window.exportedCsv;")
+            assert not js("return elements.moreActionsId.open;")
             # X types normally in the note; outside inputs it acts like the box cross.
             js(f"selectIssue({json.dumps(second_id)}, false);")
             wait_for("state.selectedIssueId === " + json.dumps(second_id))
@@ -211,6 +234,7 @@ def main():
             click(".recovery-row button")
             wait_for("state.document?.issues[0].note === 'Recovered after restart' && state.journalPending === 0")
             assert api.drafts.list(folder) == []
+            click("#moreActionsId summary")
             click("#backupsId")
             wait_for("elements.backupDialogId.open && elements.backupSelectId.options.length > 0")
             click("#closeBackupsId")

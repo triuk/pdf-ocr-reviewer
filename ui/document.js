@@ -21,14 +21,14 @@ async function openDocumentNow(fileId, afterReload = false) {
     state.pageData.clear();
     renderFileList();
     renderDocumentShell();
-    setActiveStatus(documentData.status);
+    renderReviewComplete();
     elements.fileNoteId.value = documentData.note || "";
     if (state.fileNoteDraft?.fileId === fileId && state.fileNoteDraft.folder === state.folder) {
       elements.fileNoteId.value = state.fileNoteDraft.note;
       setSaveState("Poznámka souboru není uložena; zůstala v editoru", true);
     }
     const file = state.files.find((item) => item.file_id === fileId);
-    if (file) { file.issue_counts = documentData.issue_counts; file.status = documentData.status; }
+    if (file) { file.issue_counts = documentData.issue_counts; file.status = documentData.status; file.review_complete = documentData.review_complete; }
     renderFileList();
     refreshIssueViews();
     renderDraftRecovery();
@@ -47,6 +47,7 @@ function clearDocument() {
   releasePageResources();
   state.activeFileId = null;
   state.document = null;
+  renderReviewComplete();
   state.selectedIssueId = null;
   elements.documentNameId.textContent = "Vyberte PDF";
   elements.documentMetaId.textContent = "";
