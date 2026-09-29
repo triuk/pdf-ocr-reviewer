@@ -38,6 +38,8 @@ class BackendApi:
         self.persistence_error: dict[str, str] | None = None
         self._manifest_revision: str | None = None
         self._document_sha256: str | None = None
+        self.context_id = str(uuid.uuid4())
+        self.document_id: str | None = None
         if initial_folder is not None:
             try:
                 self.open_folder(initial_folder)
@@ -52,22 +54,38 @@ class BackendApi:
             if self.active_document is not None:
                 self.active_document.close()
                 self.active_document = None
+            self.document_id = None
 
     def bind(self, window: Any) -> None:
+        bindings = {
+            "selectFolderB": (0, self.select_folder_callback), "openFolderB": (1, self.open_folder_callback),
+            "refreshFolderB": (0, self.refresh_folder_callback), "openDocumentB": (1, self.open_document_callback),
+            "requestPageB": (4, self.request_page_callback), "setFileStatusB": (2, self.set_file_status_callback),
+            "toggleProblemPageB": (2, self.toggle_problem_page_callback), "setLastPageB": (2, self.set_last_page_callback),
+            "setFileNoteB": (2, self.set_file_note_callback), "setUiOptionsB": (1, self.set_ui_options_callback),
+            "exportCsvB": (0, self.export_csv_callback), "addIssueB": (2, self.add_issue_callback),
+            "updateIssueB": (3, self.update_issue_callback),
+        }
         window.bind("syncStateB", self.sync_state_callback)
-        window.bind("selectFolderB", self.select_folder_callback)
-        window.bind("openFolderB", self.open_folder_callback)
-        window.bind("refreshFolderB", self.refresh_folder_callback)
-        window.bind("openDocumentB", self.open_document_callback)
-        window.bind("requestPageB", self.request_page_callback)
-        window.bind("setFileStatusB", self.set_file_status_callback)
-        window.bind("toggleProblemPageB", self.toggle_problem_page_callback)
-        window.bind("setLastPageB", self.set_last_page_callback)
-        window.bind("setFileNoteB", self.set_file_note_callback)
-        window.bind("setUiOptionsB", self.set_ui_options_callback)
-        window.bind("exportCsvB", self.export_csv_callback)
-        window.bind("addIssueB", self.add_issue_callback)
-        window.bind("updateIssueB", self.update_issue_callback)
+        document_bound = {"requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"}
+        for name, (argc, callback) in bindings.items():
+            window.bind(name, self._context_callback(callback, argc, name in document_bound, 1 if name == "requestPageB" else 0))
+
+    def _context_callback(self, callback, argc: int, document_bound: bool, file_argument: int = 0):
+        def guarded(event):
+            with self._lock:
+                try:
+                    context = json.loads(event.get_string_at(argc))
+                    if not isinstance(context, dict) or context.get("context_id") != self.context_id:
+                        raise ValueError("Složka už není aktuální. Načtěte její stav znovu.")
+                    if document_bound and (context.get("document_id") != self.document_id or self.active_file_id is None
+                                           or event.get_string_at(file_argument) != self.active_file_id):
+                        raise ValueError("Dokument už není aktuální. Operace nebyla provedena.")
+                except (ValueError, TypeError, IndexError):
+                    event.return_string(self._error("STALE_CONTEXT", "Kontext požadavku se změnil; operace nebyla provedena."))
+                    return
+                callback(event)
+        return guarded
 
     def sync_state_callback(self, event: Any) -> None:
         event.return_string(self._ok(self.public_state()))
@@ -196,6 +214,7 @@ class BackendApi:
             self.manifest = manifest
             self._manifest_revision = revision
             self.active_file_id = None
+            self.context_id = str(uuid.uuid4())
             self.startup_error = None
             self.persistence_error = None
             return self.public_state()
@@ -206,17 +225,25 @@ class BackendApi:
             stat = pdf.path.stat()
             identity = FileIdentity(stat.st_size, stat.st_mtime_ns)
             if self.active_file_id != file_id or identity != pdf.identity or self.active_document is None:
+                candidate_hash = file_sha256(pdf.path)
+                candidate = PdfDocument(pdf.path)
+                try:
+                    pages = candidate.page_metadata()
+                    after = pdf.path.stat()
+                    if (after.st_size, after.st_mtime_ns) != (identity.size, identity.mtime_ns):
+                        raise PdfDocumentError("PDF se během načítání změnilo. Načtěte opravy znovu.")
+                except Exception:
+                    candidate.close()
+                    raise
                 self.close()
-                self.active_file_id = None
-                self._document_sha256 = file_sha256(pdf.path)
-                self.active_document = PdfDocument(pdf.path)
-                after = pdf.path.stat()
-                if (after.st_size, after.st_mtime_ns) != (identity.size, identity.mtime_ns):
-                    self.close()
-                    raise PdfDocumentError("PDF se během načítání změnilo. Načtěte opravy znovu.")
+                self.active_document = candidate
+                self._document_sha256 = candidate_hash
                 pdf = ScannedPdf(file_id, pdf.name, pdf.path, identity)
                 self.files[file_id] = pdf
                 self.active_file_id = file_id
+                self.document_id = str(uuid.uuid4())
+            else:
+                pages = self.active_document.page_metadata()
             assert self.active_document is not None
             entry = self._entry(file_id)
             assert self.manifest is not None
@@ -233,7 +260,8 @@ class BackendApi:
                 "file_id": file_id,
                 "name": pdf.name,
                 "page_count": self.active_document.page_count,
-                "pages": [item.to_dict() for item in self.active_document.page_metadata()],
+                "pages": [item.to_dict() for item in pages],
+                "document_id": self.document_id,
                 "status": entry.get("status", "unreviewed"),
                 "last_page": entry.get("last_page", 0),
                 "problem_pages": entry.get("problem_pages", []),
@@ -499,6 +527,7 @@ class BackendApi:
         entries = manifest.get("files", {})
         return {
             "folder": str(self.current_folder) if self.current_folder else None,
+            "context_id": self.context_id,
             "files": [
                 pdf.to_public_dict(entries.get(pdf.file_id))
                 for pdf in self.files.values()

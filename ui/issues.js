@@ -151,13 +151,16 @@ function refreshIssueViews(includeEditor = true) {
 }
 
 async function selectIssue(issueId, scroll = true) {
+  const context = captureContext();
   if (issueId !== state.selectedIssueId && !await flushIssueDraft()) return;
+  if (!contextMatches(context)) return;
   state.selectedIssueId = issueId;
   refreshIssueViews();
   const issue = selectedIssue();
   if (issue && scroll) {
     const row = elements.pagesId.querySelector(`[data-page-index="${issue.page_index}"]`);
     await requestPage(issue.page_index);
+    if (!contextMatches(context)) return;
     // Center the marked area, not just the page header, at any zoom.
     const pane = row?.querySelector(".scan-pane");
     if (pane) {
@@ -188,7 +191,11 @@ function applyIssueResponse(data) {
 }
 
 function queueIssueWork(work) {
-  const job = state.issueQueue.then(work);
+  const context = captureContext();
+  const job = state.issueQueue.then(() => {
+    if (!contextMatches(context)) throw new Error("Dokument se změnil; rozpracovaná připomínka zůstala zachována.");
+    return work();
+  });
   state.issueQueue = job.catch(() => {});
   return job;
 }
@@ -207,26 +214,27 @@ function scheduleIssueDraft() {
 
 async function saveIssueDraft(key) {
   return queueIssueWork(async () => {
-    const draft = state.issueDrafts.get(key);
-    if (!draft) return true;
-    try {
-      const data = await callBackend("updateIssueB", draft.fileId, draft.issueId, JSON.stringify({
-        note: draft.note, kind: draft.kind, expected_sha256: draft.expected_sha256,
-      }));
-      if (state.issueDrafts.get(key) === draft) state.issueDrafts.delete(key);
-      applyIssueResponse(data);
-      refreshIssueViews(false);
-      if (state.selectedIssueId === draft.issueId) {
-        elements.issueSaveId.textContent = state.issueDrafts.has(key) ? "Ukládání…" : "Uloženo";
-        elements.retryIssueSaveId.hidden = !state.issueDrafts.has(key);
+    while (state.issueDrafts.has(key)) {
+      const draft = state.issueDrafts.get(key);
+      try {
+        const data = await callBackend("updateIssueB", draft.fileId, draft.issueId, JSON.stringify({
+          note: draft.note, kind: draft.kind, expected_sha256: draft.expected_sha256,
+        }));
+        if (state.issueDrafts.get(key) === draft) state.issueDrafts.delete(key);
+        applyIssueResponse(data);
+        refreshIssueViews(false);
+        if (state.selectedIssueId === draft.issueId) {
+          elements.issueSaveId.textContent = state.issueDrafts.has(key) ? "Ukládání…" : "Uloženo";
+          elements.retryIssueSaveId.hidden = !state.issueDrafts.has(key);
+        }
+      } catch (error) {
+        elements.issueSaveId.textContent = "Neuloženo — poznámka zůstává zde";
+        elements.retryIssueSaveId.hidden = false;
+        showToast(error.message, true);
+        return false;
       }
-      return true;
-    } catch (error) {
-      elements.issueSaveId.textContent = "Neuloženo — poznámka zůstává zde";
-      elements.retryIssueSaveId.hidden = false;
-      showToast(error.message, true);
-      return false;
     }
+    return true;
   });
 }
 
@@ -238,7 +246,7 @@ async function flushIssueDraft() {
 
 async function changeIssueStatus(status, issueId = state.selectedIssueId, advance = true) {
   const issue = state.document?.issues.find((item) => item.id === issueId);
-  if (!issue || state.issueBusy) return;
+  if (!issue || state.issueBusy || state.navigating) return;
   const fileId = state.activeFileId;
   const hash = state.document.ocr_sha256;
   state.issueBusy = true;
@@ -316,6 +324,7 @@ function bindRegionMarking(pane, pageIndex, ocr) {
 }
 
 async function createIssue(pageIndex, bbox) {
+  if (state.navigating) return;
   if (!state.document) return;
   const fileId = state.activeFileId;
   const payload = { page_index: pageIndex, bbox, kind: state.issueKind, expected_sha256: state.document.ocr_sha256 };

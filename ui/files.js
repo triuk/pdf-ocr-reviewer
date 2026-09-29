@@ -100,12 +100,15 @@ async function exportCsvF() {
   }
 }
 
-async function selectFolderF() {
+function selectFolderF() { return enqueueNavigation(selectFolderFNow); }
+
+async function selectFolderFNow() {
   try {
     if (!await flushIssueDraft()) return;
     if (!await flushFileNote()) return;
     const data = await callBackend("selectFolderB");
     if (!data.cancelled) {
+      clearDocument();
       applyPublicState(data);
       await openInitialDocumentAfterFolder();
     }
@@ -114,13 +117,16 @@ async function selectFolderF() {
   }
 }
 
-async function openPathF() {
+function openPathF() { return enqueueNavigation(openPathFNow); }
+
+async function openPathFNow() {
   const path = elements.folderPathId.value.trim();
   if (!path) return;
   try {
     if (!await flushIssueDraft()) return;
     if (!await flushFileNote()) return;
     const data = await callBackend("openFolderB", path);
+    clearDocument();
     applyPublicState(data);
     await openInitialDocumentAfterFolder();
   } catch (error) {
@@ -128,7 +134,9 @@ async function openPathF() {
   }
 }
 
-async function refreshFolderF() {
+function refreshFolderF() { return enqueueNavigation(refreshFolderFNow); }
+
+async function refreshFolderFNow() {
   try {
     const fileId = state.activeFileId;
     const issueId = state.selectedIssueId;
@@ -140,9 +148,10 @@ async function refreshFolderF() {
     window.clearTimeout(state.savePositionTimer);
     const data = await callBackend("refreshFolderB");
     state.selectedIssueId = null;
+    clearDocument();
     applyPublicState(data);
     if (fileId && state.files.some((file) => file.file_id === fileId)) {
-      await openDocumentF(fileId, true);
+      if (!await openDocumentNow(fileId, true)) return;
       scrollToSavedPage(pageIndex);
       if (state.document?.issues.some((issue) => issue.id === issueId)) await selectIssue(issueId);
     } else {
@@ -156,9 +165,9 @@ async function refreshFolderF() {
 
 async function openInitialDocumentAfterFolder() {
   if (state.ui.last_file && state.files.some((file) => file.file_id === state.ui.last_file)) {
-    await openDocumentF(state.ui.last_file);
+    await openDocumentNow(state.ui.last_file);
   } else if (state.files.length) {
-    await openDocumentF(state.files[0].file_id);
+    await openDocumentNow(state.files[0].file_id);
   } else {
     clearDocument();
   }

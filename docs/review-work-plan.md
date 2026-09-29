@@ -55,18 +55,18 @@ zůstává součástí následného CI/akceptace.
 
 Priorita: vysoká. Řeší nálezy 2 a 3.
 
-- [ ] Zavést jednotný kontext požadavku: identita otevřené složky, soubor,
+- [x] Zavést jednotný kontext požadavku: identita otevřené složky, soubor,
       generace dokumentu a podle operace revize PDF/manifestu.
-- [ ] Opravit stav souboru, problémové stránky, ukládání poznámek, odpovědi
+- [x] Opravit stav souboru, problémové stránky, ukládání poznámek, odpovědi
       připomínek a automatický přechod. Odpověď patří původnímu kontextu;
       nesmí změnit mezitím otevřený dokument ani spustit jeho navigaci.
-- [ ] Ošetřit stejný název PDF ve dvou různých složkách i více rychlých
+- [x] Ošetřit stejný název PDF ve dvou různých složkách i více rychlých
       požadavků na otevření. Ochranu kontextu uplatnit také na backendu.
-- [ ] Nový dokument otevřít a ověřit před výměnou aktivního. Při selhání
+- [x] Nový dokument otevřít a ověřit před výměnou aktivního. Při selhání
       zachovat původní plně funkční dokument, nebo zobrazit jednoznačný prázdný
       stav, pokud původní kontext už neexistuje.
-- [ ] Zamezit ztrátě novějšího konceptu při dokončení staršího autosave.
-- [ ] Přidat deterministické JS testy s řízeným pořadím odpovědí a integrační
+- [x] Zamezit ztrátě novějšího konceptu při dokončení staršího autosave.
+- [x] Přidat deterministické JS testy s řízeným pořadím odpovědí a integrační
       scénáře přepnutí během zápisu, reloadu a chyby otevření PDF.
 
 Hotovo, když rychlé přepínání nemění cizí soubor ani neztrácí text a po chybě

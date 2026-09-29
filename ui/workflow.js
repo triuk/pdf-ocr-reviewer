@@ -1,5 +1,6 @@
 async function setFileStatusF(status) {
-  if (!state.activeFileId) return;
+  const context = captureContext();
+  if (!state.activeFileId || state.navigating) return;
   try {
     await callBackend("setFileStatusB", state.activeFileId, status);
     const file = state.files.find((item) => item.file_id === state.activeFileId);
@@ -10,7 +11,7 @@ async function setFileStatusF(status) {
     if (state.document) state.document.status = status;
     setActiveStatus(status);
     renderFileList();
-    if (state.ui.auto_advance && status !== "unreviewed") await moveDocument(1, true);
+    if (contextMatches(context) && state.ui.auto_advance && status !== "unreviewed") await moveDocument(1, true);
   } catch (error) {
     showToast(error.message, true);
   }
@@ -23,7 +24,7 @@ function setActiveStatus(status) {
 }
 
 async function toggleProblemPageF(pageIndex, button) {
-  if (!state.activeFileId) return;
+  if (!state.activeFileId || state.navigating) return;
   try {
     const data = await callBackend("toggleProblemPageB", state.activeFileId, pageIndex);
     state.document.problem_pages = data.problem_pages;
@@ -68,7 +69,7 @@ function scheduleSaveCurrentPage() {
   const fileId = state.activeFileId;
 
   state.savePositionTimer = window.setTimeout(async () => {
-    if (fileId !== state.activeFileId) return;
+    if (fileId !== state.activeFileId || state.navigating) return;
     const pageIndex = getCurrentPageIndex();
     try {
       await callBackend("setLastPageB", fileId, pageIndex);
@@ -79,7 +80,7 @@ function scheduleSaveCurrentPage() {
 }
 
 function scheduleSaveNote() {
-  if (!state.activeFileId) return;
+  if (!state.activeFileId || state.navigating) return;
   window.clearTimeout(state.saveNoteTimer);
   state.fileNoteDraft = { folder: state.folder, fileId: state.activeFileId, note: elements.fileNoteId.value };
   state.saveNoteTimer = window.setTimeout(flushFileNote, 500);
@@ -88,15 +89,16 @@ function scheduleSaveNote() {
 function flushFileNote() {
   window.clearTimeout(state.saveNoteTimer);
   const job = state.fileNoteQueue.then(async () => {
-    const draft = state.fileNoteDraft;
-    if (!draft) return true;
-    if (draft.folder !== state.folder) return false;
-    try {
-      await callBackend("setFileNoteB", draft.fileId, draft.note);
-      if (state.fileNoteDraft === draft) state.fileNoteDraft = null;
-      setSaveState("Manifest uložen", false);
-      return true;
-    } catch (error) { showToast(error.message, true); return false; }
+    while (state.fileNoteDraft) {
+      const draft = state.fileNoteDraft;
+      if (draft.folder !== state.folder) return false;
+      try {
+        await callBackend("setFileNoteB", draft.fileId, draft.note);
+        if (state.fileNoteDraft === draft) state.fileNoteDraft = null;
+        setSaveState("Manifest uložen", false);
+      } catch (error) { showToast(error.message, true); return false; }
+    }
+    return true;
   });
   state.fileNoteQueue = job.catch(() => false);
   return job;
@@ -168,6 +170,7 @@ function movePage(direction) {
 }
 
 function handleKeyboard(event) {
+  if (state.navigating) return;
   const target = event.target;
   if (event.key === "Escape") {
     setMarking(false);

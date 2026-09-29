@@ -2,6 +2,9 @@
 
 const state = {
   folder: null,
+  contextId: null,
+  navigationQueue: Promise.resolve(),
+  navigating: false,
   files: [],
   ui: {
     last_file: null,
@@ -82,7 +85,39 @@ async function callBackend(name, ...args) {
   }
   const fn = webui[name];
   if (typeof fn !== "function") throw new Error(`Backend function ${name} is unavailable.`);
-  return parseEnvelope(await fn(...args));
+  const context = captureContext();
+  const contextual = name !== "syncStateB";
+  const documentBound = ["requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"].includes(name);
+  if (contextual) args.push(JSON.stringify({context_id: context.contextId, document_id: context.documentId}));
+  const result = parseEnvelope(await fn(...args));
+  if (contextual && (context.contextId !== state.contextId || (documentBound && !contextMatches(context)))) {
+    throw new Error("Odpověď patří dříve otevřenému dokumentu; aktuální zobrazení se nezměnilo.");
+  }
+  return result;
+}
+
+function captureContext() {
+  return {contextId: state.contextId, documentId: state.document?.document_id, fileId: state.activeFileId, generation: state.generation};
+}
+
+function contextMatches(context) {
+  return context.contextId === state.contextId && context.documentId === state.document?.document_id
+    && context.fileId === state.activeFileId && context.generation === state.generation;
+}
+
+function enqueueNavigation(work) {
+  const job = state.navigationQueue.then(async () => {
+    state.navigating = true;
+    document.querySelectorAll(".workspace, .issue-sidebar").forEach(node => { node.inert = true; });
+    try { return await work(); }
+    finally {
+      state.navigating = false;
+      document.querySelectorAll(".workspace, .issue-sidebar").forEach(node => { node.inert = false; });
+      for (const index of state.visiblePages) requestPage(index);
+    }
+  });
+  state.navigationQueue = job.catch(error => { showToast(error.message, true); return false; });
+  return state.navigationQueue;
 }
 
 async function syncStateF() {
@@ -100,6 +135,7 @@ function applyPublicState(data) {
   state.applyingState = true;
   try {
     state.folder = data.folder;
+    state.contextId = data.context_id;
     state.files = Array.isArray(data.files) ? data.files : [];
     state.ui = { ...state.ui, ...(data.ui || {}) };
     elements.folderPathId.value = state.folder || "";

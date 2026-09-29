@@ -1,5 +1,5 @@
 async function requestPage(pageIndex) {
-  if (!state.document || state.pageData.has(pageIndex)) return;
+  if (state.navigating || !state.document || state.pageData.has(pageIndex)) return;
   const existing = [...state.pendingRequests.values()].find((value) => value.pageIndex === pageIndex);
   if (existing) return;
 

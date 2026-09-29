@@ -1,13 +1,17 @@
-async function openDocumentF(fileId, afterReload = false) {
+function openDocumentF(fileId, afterReload = false) {
+  return enqueueNavigation(() => openDocumentNow(fileId, afterReload));
+}
+
+async function openDocumentNow(fileId, afterReload = false) {
   try {
     if (!await flushIssueDraft()) return;
     if (!afterReload && !await flushFileNote()) return;
     const generation = ++state.generation;
-    releasePageResources();
-    elements.pageScrollId.scrollTop = 0;
+    state.pendingRequests.clear();
 
     const documentData = await callBackend("openDocumentB", fileId);
     if (generation !== state.generation) return;
+    releasePageResources();
     state.activeFileId = fileId;
     state.document = documentData;
     state.selectedIssueId = null;
@@ -23,17 +27,21 @@ async function openDocumentF(fileId, afterReload = false) {
       setSaveState("Poznámka souboru není uložena; zůstala v editoru", true);
     }
     const file = state.files.find((item) => item.file_id === fileId);
-    if (file) file.issue_counts = documentData.issue_counts;
+    if (file) { file.issue_counts = documentData.issue_counts; file.status = documentData.status; }
+    renderFileList();
     refreshIssueViews();
 
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     if (generation === state.generation) scrollToSavedPage(documentData.last_page || 0);
+    return true;
   } catch (error) {
     showToast(error.message, true);
+    return false;
   }
 }
 
 function clearDocument() {
+  state.generation += 1;
   releasePageResources();
   state.activeFileId = null;
   state.document = null;
