@@ -18,6 +18,7 @@ from .manifest import (
     load_manifest,
     manifest_revision,
     save_manifest,
+    validate_manifest,
 )
 from .models import VALID_FILE_STATUSES, VALID_OCR_MODES, FileIdentity, ScannedPdf
 from .pdf_document import PdfDocument, PdfDocumentError
@@ -246,7 +247,14 @@ class BackendApi:
         issues = copy.deepcopy(entry["issues"])
         for issue in issues:
             issue["stale"] = issue["target_sha256"] != self._document_sha256
+            issue["invalid_target"] = self._invalid_issue_target(issue)
         return {"issues": issues, "issue_counts": issue_counts(issues), "ocr_sha256": self._document_sha256}
+
+    def _invalid_issue_target(self, issue: dict[str, Any]) -> bool:
+        if self.active_document is None or issue["page_index"] >= self.active_document.page_count:
+            return True
+        page = self.active_document.page_geometry(issue["page_index"])
+        return any(abs(issue[key] - page[key]) > 0.01 for key in ("page_width", "page_height", "page_rotation"))
 
     def _check_issue_document(self, file_id: str, expected_sha256: str) -> None:
         pdf = self._require_file(file_id)
@@ -303,6 +311,8 @@ class BackendApi:
                 raise ValueError("Status fixed může zapsat pouze opravný postup s výsledkem opravy.")
             if status == "verified" and issue["status"] not in {"fixed", "verified"}:
                 raise ValueError("Potvrdit lze pouze opravenou připomínku.")
+            if status == "verified" and self._invalid_issue_target(issue):
+                raise ValueError("Připomínka neodpovídá stránce aktuálního PDF. Nelze ji potvrdit.")
             if status == "verified" and issue["target_sha256"] != self._document_sha256:
                 raise ValueError("Připomínka patří k jiné verzi PDF. Nelze ji potvrdit.")
             now = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -426,31 +436,14 @@ class BackendApi:
                 raise ValueError("UI options must be an object.")
             manifest = self._require_manifest()
             ui = manifest["ui"]
-            if "issue_kind" in options:
-                if not isinstance(options["issue_kind"], str) or options["issue_kind"] not in ISSUE_KINDS:
-                    raise ValueError("Invalid issue kind.")
-                ui["issue_kind"] = options["issue_kind"]
-            if "zoom_percent" in options:
-                zoom = int(options["zoom_percent"])
-                if not 25 <= zoom <= 400:
-                    raise ValueError("Zoom must be from 25 to 400 percent.")
-                ui["zoom_percent"] = zoom
-            if "ocr_mode" in options:
-                mode = str(options["ocr_mode"])
-                if mode not in VALID_OCR_MODES:
-                    raise ValueError(f"Unsupported OCR mode: {mode}")
-                ui["ocr_mode"] = mode
-            if "overlay" in options:
-                ui["overlay"] = bool(options["overlay"])
-            if "status_filter" in options:
-                status_filter = str(options["status_filter"])
-                if status_filter != "all" and status_filter not in VALID_FILE_STATUSES:
-                    raise ValueError(f"Unsupported status filter: {status_filter}")
-                ui["status_filter"] = status_filter
-            if "name_filter" in options:
-                ui["name_filter"] = str(options["name_filter"])
-            if "auto_advance" in options:
-                ui["auto_advance"] = bool(options["auto_advance"])
+            known = {"issue_kind", "zoom_percent", "ocr_mode", "overlay", "status_filter", "name_filter", "auto_advance", "issue_filter"}
+            if set(options) - known:
+                raise ValueError("Unknown UI option.")
+            candidate = copy.deepcopy(manifest)
+            candidate["ui"].update(options)
+            validate_manifest(candidate)
+            self.manifest = candidate
+            ui = candidate["ui"]
             try:
                 self._save_manifest()
             except ManifestError as exc:
@@ -534,9 +527,7 @@ class BackendApi:
     def _save_manifest(self) -> None:
         manifest = self._require_manifest()
         assert self.current_folder is not None
-        if manifest_revision(self.current_folder) != self._manifest_revision:
-            raise ManifestError("Manifest změnil jiný nástroj. Použijte Načíst opravy; novější data nebyla přepsána.")
-        self._manifest_revision = save_manifest(self.current_folder, manifest)
+        self._manifest_revision = save_manifest(self.current_folder, manifest, expected_revision=self._manifest_revision)
         self.persistence_error = None
 
     def _set_persistence_error(self, exc: Exception) -> None:

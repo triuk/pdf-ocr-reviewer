@@ -1,7 +1,7 @@
 # Plán práce po code review
 
 Datum: 2026-09-29. Výchozí revize: `02afcfb` (`v0.1.4`).
-Stav: plán připraven; implementace následujících etap nezačala.
+Stav: probíhá implementace etap 1–5 do uživatelské zkoušky ergonomie.
 
 Plán pokrývá sedm nálezů z celkového code review a navržená vylepšení
 testování, ergonomie, zotavení po chybě a výkonu. Nejvyšší prioritu má
@@ -23,29 +23,33 @@ ochrana připomínek a výsledků oprav, poté správnost ovládání.
 
 Priorita: nejvyšší. Řeší nálezy 1, 4 a 7; podmínka pro další úpravy persistence.
 
-- [ ] Přidat regresní test zápisu druhého procesu mezi kontrolou revize a
+- [x] Přidat regresní test zápisu druhého procesu mezi kontrolou revize a
       nahrazením manifestu.
-- [ ] Zavést společný zápisový helper a protokol zamčení pro reviewer i externí
+- [x] Zavést společný zápisový helper a protokol zamčení pro reviewer i externí
       opravný nástroj. Kontrola očekávané revize a atomický zápis proběhnou pod
       týmž zámkem. Konflikt nesmí být vyřešen slepým opakováním nad novou revizí.
 - [ ] Ošetřit souběh dvou instancí, timeout zámku a ukončení procesu; ověřit
       chování na Linuxu i Windows. Nepodporovaný zámek nesmí tiše vypnout ochranu.
-- [ ] Zpřístupnit helper externímu opravnému postupu a aktualizovat instrukce
+- [x] Zpřístupnit helper externímu opravnému postupu a aktualizovat instrukce
       i dokumentaci. Popsat hranici ochrany: nespolupracující přímý zápis cizího
       programu nelze tímto protokolem plně zabezpečit.
-- [ ] Doplnit typovou validaci všech známých používaných polí, včetně resources,
+- [x] Doplnit typovou validaci všech známých používaných polí, včetně resources,
       identity, poznámek a nastavení UI. Chyby musí obsahovat cestu k poli a
       skončit řízenou odpovědí API. Neznámá pole zachovat.
-- [ ] Při otevření PDF ověřit použitelnost odkazů na stránky a geometrii
+- [x] Při otevření PDF ověřit použitelnost odkazů na stránky a geometrii
       připomínek; neplatná připomínka nesmí vypadat jako platná k potvrzení.
-- [ ] Změny nastavení validovat nad kopií a převzít až jako celek. Odmítnutý
+- [x] Změny nastavení validovat nad kopií a převzít až jako celek. Odmítnutý
       požadavek nesmí změnit paměť ani později prosáknout na disk.
-- [ ] Aktualizovat starší vestavěné repair_instructions řízenou migrací;
+- [x] Aktualizovat starší vestavěné repair_instructions řízenou migrací;
       zachovat uživatelská rozšíření a popsat změnu protokolu.
 
 Hotovo, když testy souběhu neztratí cizí změny, chybná data mají srozumitelné
 chyby a odmítnuté operace nezmění stav. Ověřit také starší manifesty,
 neznámá pole, složku pouze pro čtení a selhání zápisu.
+
+Implementováno a ověřeno na Linuxu: společný zámek, CLI, validace a atomické
+změny nastavení. Test zámku je přenositelný; skutečné ověření na Windows
+zůstává součástí následného CI/akceptace.
 
 ## 2. Spolehlivé přepínání dokumentů a opožděné odpovědi
 

@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import pymupdf
+from app.manifest import manifest_revision
 from webui import webui
 
 from app.api import BackendApi
@@ -158,7 +159,7 @@ def main():
                 issue["status"] = "fixed"
                 issue["result"] = {"summary": "Test: geometrie opravena", "before_sha256": before, "after_sha256": before, "at": "2026-09-25T20:00:00+02:00"}
                 issue["history"].append({"at": issue["result"]["at"], "action": "fixed", "from": "open", "to": "fixed"})
-            save_manifest(folder, manifest)
+            save_manifest(folder, manifest, expected_revision=manifest_revision(folder))
             external_bytes = (folder / MANIFEST_FILENAME).read_bytes()
             js("scheduleSaveCurrentPage();")
             time.sleep(0.65)

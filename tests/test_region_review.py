@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pymupdf
+from app.manifest import manifest_revision
 import pytest
 
 from app.api import BackendApi
@@ -41,7 +42,7 @@ def simulate_repair(path: Path, issue_id: str) -> str:
     issue["status"] = "fixed"
     issue["result"] = {"summary": "Geometry checked", "before_sha256": sha, "after_sha256": sha, "at": "2026-09-25T20:00:00+02:00"}
     issue["history"].append({"action": "fixed", "at": issue["result"]["at"], "from": "open", "to": "fixed"})
-    save_manifest(path.parent, manifest)
+    save_manifest(path.parent, manifest, expected_revision=manifest_revision(path.parent))
     return sha
 
 
@@ -100,7 +101,7 @@ def test_external_manifest_cannot_be_overwritten_by_any_save(reviewed):
 def test_write_failure_rolls_back_issue(reviewed, monkeypatch):
     api, path, payload = reviewed
     original = copy.deepcopy(api.manifest)
-    def fail(*args):
+    def fail(*args, **kwargs):
         raise ManifestWriteError("read only")
     monkeypatch.setattr("app.api.save_manifest", fail)
     with pytest.raises(ManifestWriteError):
@@ -111,11 +112,11 @@ def test_write_failure_rolls_back_issue(reviewed, monkeypatch):
 def test_external_write_immediately_after_save_is_not_adopted_as_our_revision(reviewed, monkeypatch):
     api, path, payload = reviewed
     real_save = save_manifest
-    def save_then_external_edit(folder, manifest):
-        written_hash = real_save(folder, manifest)
+    def save_then_external_edit(folder, manifest, **kwargs):
+        written_hash = real_save(folder, manifest, **kwargs)
         external = load_manifest(folder)
         external["external_change"] = "must survive"
-        real_save(folder, external)
+        real_save(folder, external, expected_revision=manifest_revision(folder))
         return written_hash
     monkeypatch.setattr("app.api.save_manifest", save_then_external_edit)
     api.set_file_note(path.name, "our note")

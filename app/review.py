@@ -13,7 +13,7 @@ COORDINATE_SYSTEM = "displayed_page_points_top_left"
 
 def repair_instructions() -> dict[str, Any]:
     return {
-        "version": 1,
+        "version": 2,
         "purpose": "Cílené opravy OCR podle ručních připomínek. Tento manifest je zadání i evidence výsledků.",
         "rules": [
             "Zpracuj pouze issues se status=open u PDF v rozsahu zadaném uživatelem. Hranice rozsahu jsou včetně; názvy řaď podle (name.casefold(), name). Pokud hranice nejsou jednoznačné, vyžádej upřesnění.",
@@ -27,8 +27,14 @@ def repair_instructions() -> dict[str, Any]:
             "Zachovej id, source_sha256 a historii. Nastav target_sha256 opravené připomínky na hash výstupu; podle potřeby aktualizuj bbox/targets, aby ukazovaly opravené místo. Původní geometrii při změně ulož do history. U ostatních připomínek aktualizuj target_sha256 pouze po ověření, že jejich oblast a OCR cíle zůstaly platné; jinak ponech starou vazbu.",
             "U souboru aktualizuj ocr_sha256 na hash výsledku. Staré QA2/QA3 PASS platí jen pro původní hash; nevydávej je za kontrolu nové verze a nepřepisuj je na PASS bez příslušné kontroly.",
             "Při nejasnosti či neúspěchu ponech status=open a do history přidej {at,action:'repair_blocked',summary}. Připomínky ani jejich historii nemaž. Obnovené open jsou nové požadavky i tehdy, když mají starší result.",
-            "Manifest zapisuj atomicky až po úspěšném uložení a ověření PDF. Před zápisem znovu načti manifest; při souběžné změně sluč jen vlastní výsledky bez přepsání nových uživatelských změn. Zachovej repair_instructions, ui, poznámky, ostatní soubory i neznámá pole. Reviewer poté načte aktualizace tlačítkem Načíst opravy.",
+            "Manifest zapisuj pomocí writer_protocol až po úspěšném uložení a ověření PDF. Před zápisem znovu načti manifest; při souběžné změně sluč jen vlastní výsledky bez přepsání nových uživatelských změn. Zachovej repair_instructions, ui, poznámky, ostatní soubory i neznámá pole. Reviewer poté načte aktualizace tlačítkem Načíst opravy.",
         ],
+        "writer_protocol": {
+            "version": 1,
+            "read_revision": "pdf-ocr-reviewer --folder FOLDER --manifest-revision",
+            "commit": "pdf-ocr-reviewer --folder FOLDER --write-manifest CANDIDATE.json --expected-revision SHA256_OR_missing",
+            "rules": "Před načtením zadání zjisti revizi manifestu příkazem read_revision. Kandidáta připrav mimo živý manifest. Zapisuj výhradně příkazem commit s touto očekávanou revizí (nebo Python save_manifest(..., expected_revision=revision)). Helper drží společný zámek .pdf-ocr-reviewer.manifest.json.lock při kontrole revize i zápisu. Při konfliktu načti nový stav, sluč pouze nekolidující výsledky a znovu je ověř; nikdy jen nenahrazuj očekávanou revizi. Soubor zámku nemaž. Přímé zápisy jiných programů zámek nerespektují a nejsou chráněné.",
+        },
         "statuses": {"open": "K opravě", "fixed": "Opraveno, čeká na lidské ověření", "verified": "Potvrzeno člověkem", "dismissed": "Zrušené označení; neopravovat"},
         "kinds": {"position": "Špatná poloha", "oversized": "Špatná velikost boxu", "text": "Chybný text", "missing": "Chybějící text", "other": "Jiný problém; viz poznámka"},
         "kind_notes": {"oversized": "Historický klíč pro špatnou velikost boxu: box může být příliš velký i příliš malý. Uprav rozměry podle obrazu a připomínky."},

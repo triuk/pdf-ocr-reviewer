@@ -9,8 +9,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .file_lock import file_lock
 from .models import VALID_FILE_STATUSES, VALID_OCR_MODES, ScannedPdf
-from .review import ISSUE_KINDS, file_sha256, repair_instructions, validate_issue
+from .review import ISSUE_KINDS, file_sha256, repair_instructions, validate_issue, valid_hash
 
 MANIFEST_FILENAME = "pdf-ocr-reviewer.manifest.json"
 SCHEMA_VERSION = 2
@@ -65,7 +66,7 @@ def load_manifest(folder: Path) -> dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise ManifestFormatError(f"Manifest is not valid JSON: {path}") from exc
     except OSError as exc:
         raise ManifestError(f"Manifest cannot be read: {path}") from exc
@@ -93,6 +94,13 @@ def migrate_manifest(data: Any) -> Any:
             data = copy.deepcopy(data)
             data["repair_instructions"]["kinds"]["oversized"] = "Špatná velikost boxu"
             data["repair_instructions"].setdefault("kind_notes", repair_instructions()["kind_notes"])
+    if isinstance(data, dict) and isinstance(data.get("repair_instructions"), dict):
+        instructions = data["repair_instructions"]
+        if instructions.get("version") == 1 and "writer_protocol" not in instructions:
+            data = copy.deepcopy(data)
+            data["repair_instructions"]["writer_protocol"] = repair_instructions()["writer_protocol"]
+            data["repair_instructions"]["version"] = 2
+            # Keep all original/custom rules; the new protocol refines atomic writes.
     return data
 
 
@@ -113,38 +121,60 @@ def validate_manifest(data: Any) -> None:
     if not isinstance(ui, dict) or not isinstance(files, dict):
         raise ManifestFormatError("Manifest must contain object fields 'ui' and 'files'.")
 
-    zoom = ui.get("zoom_percent", 100)
-    if not isinstance(zoom, int) or not 25 <= zoom <= 400:
-        raise ManifestFormatError("ui.zoom_percent must be an integer from 25 to 400.")
-    if ui.get("ocr_mode", "pdf_order") not in VALID_OCR_MODES:
-        raise ManifestFormatError("ui.ocr_mode has an unsupported value.")
-    if not isinstance(ui.get("overlay", True), bool):
-        raise ManifestFormatError("ui.overlay must be a boolean.")
-    if not isinstance(ui.get("issue_kind", "position"), str) or ui.get("issue_kind", "position") not in ISSUE_KINDS:
-        raise ManifestFormatError("ui.issue_kind has an unsupported value.")
+    def field(value, predicate, path):
+        if not predicate(value):
+            raise ManifestFormatError(f"Invalid {path}: {value!r}")
+
+    def choice(value, choices):
+        return isinstance(value, str) and value in choices
+
+    integer = lambda value: type(value) is int and value >= 0
+    string = lambda value: isinstance(value, str)
+    nullable_string = lambda value: value is None or isinstance(value, str)
+    field(ui.get("zoom_percent", 100), lambda n: type(n) is int and 25 <= n <= 400, "ui.zoom_percent")
+    field(ui.get("ocr_mode", "pdf_order"), lambda v: choice(v, VALID_OCR_MODES), "ui.ocr_mode")
+    field(ui.get("issue_kind", "position"), lambda v: choice(v, ISSUE_KINDS), "ui.issue_kind")
+    field(ui.get("status_filter", "all"), lambda v: choice(v, {*VALID_FILE_STATUSES, "all"}), "ui.status_filter")
+    field(ui.get("issue_filter", "all"), lambda v: choice(v, {"all", "open", "fixed"}), "ui.issue_filter")
+    for key in ("overlay", "auto_advance"):
+        field(ui.get(key, True), lambda v: type(v) is bool, f"ui.{key}")
+    field(ui.get("name_filter", ""), string, "ui.name_filter")
+    field(ui.get("last_file"), nullable_string, "ui.last_file")
+    field(data.get("updated_at"), nullable_string, "updated_at")
 
     for file_id, entry in files.items():
-        if not isinstance(file_id, str) or not isinstance(entry, dict):
-            raise ManifestFormatError("Each files entry must be an object keyed by a string.")
-        if entry.get("status", "unreviewed") not in VALID_FILE_STATUSES:
-            raise ManifestFormatError(f"Unsupported status for {file_id!r}.")
-        if not isinstance(entry.get("problem_pages", []), list) or not all(
-            isinstance(value, int) and value >= 0
-            for value in entry.get("problem_pages", [])
-        ):
-            raise ManifestFormatError(f"Invalid problem_pages for {file_id!r}.")
+        path = f"files[{file_id!r}]"
+        field(entry, lambda v: isinstance(v, dict), path)
+        field(entry.get("status", "unreviewed"), lambda v: choice(v, VALID_FILE_STATUSES), path + ".status")
+        field(entry.get("last_page", 0), integer, path + ".last_page")
+        field(entry.get("note", ""), string, path + ".note")
+        field(entry.get("reviewed_at"), nullable_string, path + ".reviewed_at")
+        pages = entry.get("problem_pages", [])
+        field(pages, lambda v: isinstance(v, list) and all(integer(n) for n in v), path + ".problem_pages")
+        if "identity" in entry:
+            identity = entry["identity"]
+            field(identity, lambda v: isinstance(v, dict), path + ".identity")
+            for key in ("size", "mtime_ns"):
+                field(identity.get(key), integer, path + ".identity." + key)
+        if "ocr_sha256" in entry:
+            field(entry["ocr_sha256"], valid_hash, path + ".ocr_sha256")
+        if "resources" in entry:
+            resources = entry["resources"]
+            field(resources, lambda v: isinstance(v, dict), path + ".resources")
+            for key in ("source", "qa2", "qa3"):
+                if key in resources:
+                    field(resources[key], lambda v: isinstance(v, str) and bool(v), path + ".resources." + key)
         issues = entry.get("issues", [])
-        if not isinstance(issues, list):
-            raise ManifestFormatError(f"Invalid issues for {file_id!r}.")
-        try:
-            seen = set()
-            for issue in issues:
+        field(issues, lambda v: isinstance(v, list), path + ".issues")
+        seen = set()
+        for index, issue in enumerate(issues):
+            try:
                 validate_issue(issue)
                 if issue["id"] in seen:
                     raise ValueError("Duplicate issue ID.")
                 seen.add(issue["id"])
-        except ValueError as exc:
-            raise ManifestFormatError(f"Invalid issue in {file_id!r}: {exc}") from exc
+            except ValueError as exc:
+                raise ManifestFormatError(f"Invalid issue at {path}.issues[{index}]: {exc}") from exc
 
 
 def ensure_file_entry(manifest: dict[str, Any], pdf: ScannedPdf) -> dict[str, Any]:
@@ -160,7 +190,18 @@ def ensure_file_entry(manifest: dict[str, Any], pdf: ScannedPdf) -> dict[str, An
     return entry
 
 
-def save_manifest(folder: Path, manifest: dict[str, Any]) -> str:
+def save_manifest(folder: Path, manifest: dict[str, Any], *, expected_revision: str | None) -> str:
+    """Compare and replace under a lock shared by all cooperating writers."""
+    try:
+        with file_lock(folder / f".{MANIFEST_FILENAME}.lock"):
+            if manifest_revision(folder) != expected_revision:
+                raise ManifestError("Manifest změnil jiný nástroj. Použijte Načíst opravy; novější data nebyla přepsána.")
+            return _write_manifest(folder, manifest)
+    except OSError as exc:
+        raise ManifestWriteError(f"Manifest cannot be locked or written: {exc}") from exc
+
+
+def _write_manifest(folder: Path, manifest: dict[str, Any]) -> str:
     validate_manifest(manifest)
     data = {"repair_instructions": copy.deepcopy(manifest["repair_instructions"]), **copy.deepcopy(manifest)}
     data["updated_at"] = datetime.now().astimezone().isoformat(timespec="seconds")

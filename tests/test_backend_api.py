@@ -69,7 +69,7 @@ def test_open_document_remains_available_when_manifest_write_fails(
     from app import api as api_module
     from app.manifest import ManifestWriteError
 
-    def fail_save(folder, manifest) -> None:
+    def fail_save(folder, manifest, **kwargs) -> None:
         raise ManifestWriteError("simulated read-only folder")
 
     monkeypatch.setattr(api_module, "save_manifest", fail_save)

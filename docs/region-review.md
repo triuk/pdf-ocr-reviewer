@@ -74,3 +74,25 @@ saving issue changes. It detects stale targets, but does not guess their new
 locations. Human confirmation of a stale target is blocked. Manifest replacement
 detection is optimistic concurrency protection, not a multiwriter database lock;
 avoid simultaneous writing by external tools and the reviewer.
+
+## Cooperative writer protocol (instructions version 2)
+
+Before reading the manifest, capture its revision with:
+
+```bash
+python main.py --folder /path/to/pdfs --manifest-revision
+```
+
+Keep that revision while preparing a separate candidate JSON. After verifying
+PDF repairs, commit the candidate through the shared writer:
+
+```bash
+python main.py --folder /path/to/pdfs --write-manifest candidate.json --expected-revision HASH
+```
+
+Use `missing` only when the initial manifest did not exist. The Python interface
+is `save_manifest(folder, candidate, expected_revision=revision)` (`None` for a
+missing manifest). Both hold `.pdf-ocr-reviewer.manifest.json.lock` across the
+revision check and replacement. Never delete that lock file. A conflict requires
+reading and reconciling the new manifest, not merely substituting its hash.
+Direct writes by unrelated programs do not participate in this protection.

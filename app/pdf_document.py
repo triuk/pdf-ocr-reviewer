@@ -48,6 +48,10 @@ class PdfDocument:
     def page_count(self) -> int:
         return self._document.page_count
 
+    def page_geometry(self, page_index: int) -> dict[str, float]:
+        page = self._document.load_page(page_index)
+        return {"page_width": page.rect.width, "page_height": page.rect.height, "page_rotation": page.rotation}
+
     def page_metadata(self) -> list[PageMetadata]:
         metadata: list[PageMetadata] = []
         for page_index in range(self.page_count):

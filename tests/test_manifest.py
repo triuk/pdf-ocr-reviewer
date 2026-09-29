@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from app.manifest import manifest_revision
 
 from app.manifest import (
     MANIFEST_FILENAME,
@@ -35,7 +36,7 @@ def test_manifest_round_trip_preserves_unknown_fields(tmp_path: Path) -> None:
         "future_entry": 123,
     }
 
-    save_manifest(tmp_path, manifest)
+    save_manifest(tmp_path, manifest, expected_revision=manifest_revision(tmp_path))
     loaded = load_manifest(tmp_path)
 
     assert loaded["future_field"] == {"keep": True}
@@ -72,6 +73,6 @@ def test_v1_migration_preserves_all_review_data_and_unknown_fields(tmp_path: Pat
     assert migrated["ui"] == original["ui"]
     assert migrated["future"] == original["future"]
     assert json.loads(path.read_text())["schema_version"] == 1  # read-only until save
-    save_manifest(tmp_path, migrated)
+    save_manifest(tmp_path, migrated, expected_revision=manifest_revision(tmp_path))
     assert next(iter(json.loads(path.read_text()))) == "repair_instructions"
     assert load_manifest(tmp_path) == migrated

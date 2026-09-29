@@ -41,8 +41,8 @@ function renderIssueSidebar() {
     heading.textContent = `${issueSymbols[issue.status]} ${issueStatusLabels[issue.status]} · str. ${issue.page_index + 1}`;
     const detail = document.createElement("span");
     detail.textContent = `${issueKindLabels[issue.kind]}${issue.text ? ` · ${issue.text}` : ""}`;
-    button.title = `${heading.textContent}\n${detail.textContent}\n${issue.note}${issue.stale ? "\nJiná verze PDF — nutné nové označení" : ""}`;
-    if (issue.stale) heading.textContent += " · jiná verze";
+    button.title = `${heading.textContent}\n${detail.textContent}\n${issue.note}${(issue.stale || issue.invalid_target) ? "\nJiná verze PDF — nutné nové označení" : ""}`;
+    if ((issue.stale || issue.invalid_target)) heading.textContent += " · jiná verze";
     button.append(heading, detail);
     button.addEventListener("click", () => selectIssue(issue.id));
     elements.issueListId.append(button);
@@ -68,15 +68,15 @@ function renderIssueEditor() {
   elements.issueSaveId.textContent = draft ? "Neuložené změny" : "Uloženo";
   elements.retryIssueSaveId.hidden = !draft;
   elements.verifyIssueId.hidden = issue.status !== "fixed";
-  elements.verifyIssueId.disabled = issue.stale || state.issueBusy;
+  elements.verifyIssueId.disabled = (issue.stale || issue.invalid_target) || state.issueBusy;
   elements.reopenIssueId.hidden = issue.status === "open";
   elements.reopenIssueId.disabled = state.issueBusy;
   elements.dismissIssueId.hidden = issue.status === "dismissed";
   const result = issue.result ? `Poslední oprava: ${issue.result.summary}` : "";
-  elements.issueResultId.textContent = issue.stale
+  elements.issueResultId.textContent = (issue.stale || issue.invalid_target)
     ? `⚠ Označení patří k jiné verzi PDF. Znovu označte aktuální místo; toto můžete zrušit. ${result}`
     : result;
-  elements.issueResultId.classList.toggle("stale", Boolean(issue.stale));
+  elements.issueResultId.classList.toggle("stale", Boolean((issue.stale || issue.invalid_target)));
 }
 
 function positionIssueRect(element, bbox, width, height) {
@@ -103,10 +103,10 @@ function renderPageIssues(pageIndex) {
       box.className = `issue-box issue-${issue.status}`;
       box.dataset.issueId = issue.id;
       box.classList.toggle("selected", issue.id === state.selectedIssueId);
-      box.classList.toggle("stale", issue.stale);
+      box.classList.toggle("stale", (issue.stale || issue.invalid_target));
       // A stale region remains in its old relative position and is explicitly flagged.
       positionIssueRect(box, issue.bbox, issue.page_width, issue.page_height);
-      box.title = `${issueStatusLabels[issue.status]} · ${issueKindLabels[issue.kind]}${issue.note ? `\n${issue.note}` : ""}${issue.stale ? "\nJiná verze PDF" : ""}`;
+      box.title = `${issueStatusLabels[issue.status]} · ${issueKindLabels[issue.kind]}${issue.note ? `\n${issue.note}` : ""}${(issue.stale || issue.invalid_target) ? "\nJiná verze PDF" : ""}`;
       const controls = document.createElement("div");
       controls.className = "issue-box-controls";
       // Keep both controls accessible even on small boxes against a page edge.

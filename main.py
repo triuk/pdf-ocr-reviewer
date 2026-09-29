@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -24,6 +25,9 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Check packaged runtime dependencies and exit.",
     )
+    parser.add_argument("--manifest-revision", action="store_true", help="Print the current manifest SHA-256 or missing.")
+    parser.add_argument("--write-manifest", type=Path, help="Validate and commit a candidate manifest with a revision check.")
+    parser.add_argument("--expected-revision", help="SHA-256 from before reading the manifest, or missing.")
     return parser.parse_args()
 
 
@@ -112,6 +116,26 @@ def run_self_test() -> int:
 
 def main() -> int:
     args = parse_args()
+    if args.manifest_revision or args.write_manifest:
+        from app.manifest import ManifestError, manifest_revision, save_manifest
+        from app.review import valid_hash
+        try:
+            if args.folder is None or not args.folder.is_dir():
+                raise ValueError("--folder must name an existing folder.")
+            if args.manifest_revision and args.write_manifest:
+                raise ValueError("Choose either --manifest-revision or --write-manifest.")
+            if args.manifest_revision:
+                _report(manifest_revision(args.folder) or "missing")
+            else:
+                if args.expected_revision != "missing" and not valid_hash(args.expected_revision):
+                    raise ValueError("--expected-revision must be a SHA-256 or missing.")
+                candidate = json.loads(args.write_manifest.read_text(encoding="utf-8"))
+                revision = save_manifest(args.folder, candidate, expected_revision=None if args.expected_revision == "missing" else args.expected_revision)
+                _report(revision)
+            return 0
+        except (ManifestError, ValueError, OSError) as exc:
+            _report(str(exc))
+            return 2
     if args.self_test:
         return run_self_test()
 

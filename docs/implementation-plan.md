@@ -7,7 +7,7 @@ section 17.
 
 The next work is defined in the [post-review work plan](review-work-plan.md)
 (2026-09-29): integrity fixes, reliable navigation, recovery, ergonomics and
-measured performance improvements. Implementation of that plan has not started.
+measured performance improvements. Stages 1–5 are being implemented up to ergonomics acceptance.
 
 ## 8. Loading, virtualization, and memory
 
@@ -378,12 +378,12 @@ After each completed unit of work, this README must be updated:
 ### Current work status
 
 ```text
-Phase: post-review work plan prepared; implementation not started
+Phase: safe manifest writer and validation implemented; navigation work next
 Completed: schema-2 instructions and migration; word/region marks; OCR snapshots and SHA-256 anchors; QA companion references; issue notes, history, filters, counts and colors; confirm/advance, reopen and cancel; external manifest conflict detection and reload
 Verified: automated backend tests and real WebUI/Chromium smoke workflow on a temporary copy of the supplied four-page OCR PDF
-Next action: begin review-work-plan.md stage 1 with a concurrent-write regression test and the shared manifest writer/locking protocol
+Next action: implement review-work-plan.md stage 2 (request context and reliable document switching)
 Known limitation: no OCR repair engine inside the reviewer; repairs are performed by the separately instructed external tool
-Known limitation: concurrent writes are detected optimistically; close the reviewer during repair batches when possible
+Known limitation: external writers must use the shared revision-checked writer; direct unrelated writes cannot be locked cooperatively
 Known limitation: stale regions must be marked again; no automatic relocation across changed PDFs
 Known limitation: Windows acceptance and long-document performance remain unverified; rendering remains serialized
 ```
