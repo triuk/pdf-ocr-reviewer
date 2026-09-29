@@ -214,12 +214,44 @@ def main():
             click("#backupsId")
             wait_for("elements.backupDialogId.open && elements.backupSelectId.options.length > 0")
             click("#closeBackupsId")
+            # Review progresses into a second PDF, then stops after the final fix.
+            wait_for("!state.navigating && state.journalPending === 0")
+            second = folder / "second-ocr.pdf"
+            shutil.copyfile(pdf, second)
+            builder = BackendApi(folder)
+            opened = builder.open_document(second.name)
+            box = load_manifest(folder)["files"][pdf.name]["issues"][0]["bbox"]
+            response = builder.add_issue(second.name, {"page_index": 0, "bbox": box, "kind": "position", "expected_sha256": opened["ocr_sha256"]})
+            second_issue = response["issue_id"]
+            builder.close()
+            batch = load_manifest(folder)
+            for name in (pdf.name, second.name):
+                issue = batch["files"][name]["issues"][0]
+                sha = file_sha256(folder / name)
+                issue["status"] = "fixed"
+                issue["result"] = {"summary": "Test review flow", "before_sha256": sha, "after_sha256": sha, "at": "2026-09-29T12:00:00+02:00"}
+            save_manifest(folder, batch, expected_revision=manifest_revision(folder))
+            click("#refreshFolderId")
+            wait_for("!state.navigating && state.files.length === 2 && state.document?.issue_counts.fixed === 1")
+            click("#reviewRepairsId")
+            wait_for("selectedIssue()?.status === 'fixed' && state.ui.issue_filter === 'fixed' && !state.reviewAdvancing")
+            click("#verifyIssueId")
+            wait_for("state.activeFileId === 'second-ocr.pdf' && state.selectedIssueId === " + json.dumps(second_issue) + " && !state.issueBusy && !state.navigating")
+            click("#verifyIssueId")
+            wait_for("!state.issueBusy && state.document?.issue_counts.verified === 1 && elements.toastId.textContent.includes('nejsou další')")
+            assert js("return state.activeFileId;") == second.name
+            click("#reopenIssueId")
+            wait_for("state.document?.issue_counts.open === 1")
+            js("elements.fileIssueFilterId.value='open';elements.fileIssueFilterId.dispatchEvent(new Event('change')); ")
+            assert js("return document.querySelectorAll('.file-item').length;") == 1
+            assert js("return document.querySelector('.file-item').dataset.fileId;") == second.name
+            js("state.issueFilter='all';elements.issueFilterId.value='all';refreshIssueViews();")
             shot = request("GET", f"/session/{session}/screenshot")
             args.screenshot.write_bytes(base64.b64decode(shot))
             errors = command("/log", {"type": "browser"})
             severe = [e for e in errors if e["level"] == "SEVERE"]
             assert not severe, severe
-            print(f"PASS: real WebUI transport, click/drag, autosave, external edit protection, reload, confirm/advance, reopen, persistence, durable draft recovery and backup selection. Screenshot: {args.screenshot}", flush=True)
+            print(f"PASS: real WebUI transport, click/drag, autosave, external edit protection, reload, confirm/advance, reopen, persistence, durable draft recovery, backup selection and multi-PDF review. Screenshot: {args.screenshot}", flush=True)
         finally:
             if session:
                 request("DELETE", f"/session/{session}")

@@ -17,13 +17,13 @@
 </head>
 <body>
   <header class="toolbar">
-    <button id="selectFolderId" type="button">Open folder</button>
-    <input id="folderPathId" type="text" spellcheck="false" placeholder="Path to folder with PDFs">
-    <button id="openPathId" type="button" class="secondary">Load path</button>
+    <button id="selectFolderId" type="button">Otevřít složku</button>
+    <input id="folderPathId" type="text" spellcheck="false" placeholder="Cesta ke složce s PDF">
+    <button id="openPathId" type="button" class="secondary">Načíst cestu</button>
     <button id="refreshFolderId" type="button" class="secondary" title="Znovu načíst manifest i PDF po externí opravě">Načíst opravy</button>
     <button id="backupsId" type="button" class="secondary">Zálohy</button>
     <button id="exportCsvId" type="button" class="secondary">Export CSV</button>
-    <span id="saveStateId" class="save-state">Manifest not open</span>
+    <span id="saveStateId" class="save-state">Manifest není načten</span>
 
     <label class="toolbar-field">
       <span>OCR</span>
@@ -52,16 +52,22 @@
   <main class="app-shell">
     <aside class="sidebar">
       <div class="sidebar-tools">
-        <input id="nameFilterId" type="search" placeholder="Filter names">
+        <input id="nameFilterId" type="search" placeholder="Filtrovat názvy">
         <select id="statusFilterId">
-          <option value="all">All statuses</option>
-          <option value="unreviewed">Unreviewed</option>
+          <option value="all">Všechny stavy</option>
+          <option value="unreviewed">Nekontrolováno</option>
           <option value="ok">OK</option>
-          <option value="error">OCR error</option>
-          <option value="needs_review">Needs review</option>
+          <option value="error">Chyba OCR</option>
+          <option value="needs_review">K revizi</option>
         </select>
       </div>
-      <div id="fileSummaryId" class="file-summary">No folder is open.</div>
+      <select id="fileIssueFilterId" class="file-issue-filter" aria-label="Filtrovat PDF podle připomínek">
+        <option value="all">Všechna PDF</option>
+        <option value="open">Má otevřené připomínky</option>
+        <option value="fixed">Čeká na ověření</option>
+      </select>
+      <button id="reviewRepairsId" type="button" class="secondary review-repairs" title="V — zahájit průchod opravenými místy">Ověřit opravy · V</button>
+      <div id="fileSummaryId" class="file-summary">Není otevřená složka.</div>
       <div id="fileListId" class="file-list" role="listbox" aria-label="PDF files"></div>
       <section id="issueSidebarId" class="issue-sidebar" aria-label="Připomínky dokumentu" hidden>
         <div class="issue-list-heading"><strong>Připomínky</strong>
@@ -81,14 +87,14 @@
     <section class="workspace">
       <div class="document-toolbar">
         <div>
-          <strong id="documentNameId">Select a PDF</strong>
+          <strong id="documentNameId">Vyberte PDF</strong>
           <span id="documentMetaId"></span>
         </div>
         <div class="status-buttons" aria-label="Review status">
-          <button type="button" data-status="unreviewed" class="status-button">0 Unreviewed</button>
+          <button type="button" data-status="unreviewed" class="status-button">0 Nekontrolováno</button>
           <button type="button" data-status="ok" class="status-button status-ok">1 OK</button>
-          <button type="button" data-status="error" class="status-button status-error">2 Error</button>
-          <button type="button" data-status="needs_review" class="status-button status-review">3 Review</button>
+          <button type="button" data-status="error" class="status-button status-error">2 Chyba</button>
+          <button type="button" data-status="needs_review" class="status-button status-review">3 Revize</button>
         </div>
       </div>
 
@@ -111,20 +117,20 @@
         <div id="draftRecoveryListId"></div>
       </details>
       <div class="column-headings" aria-hidden="true">
-        <span>Scan</span>
-        <span>OCR layer</span>
+        <span>Obraz</span>
+        <span>Vrstva OCR</span>
       </div>
 
       <div id="pageScrollId" class="page-scroll">
         <div id="emptyStateId" class="empty-state">
-          Open a folder with PDFs and select a file on the left.
+          Otevřete složku s PDF a vyberte soubor vlevo.
         </div>
         <div id="pagesId" class="pages"></div>
       </div>
 
       <div class="note-panel">
-        <div class="file-note"><label for="fileNoteId">File note</label>
-          <textarea id="fileNoteId" rows="2" placeholder="The note is saved to the manifest."></textarea>
+        <div class="file-note"><label for="fileNoteId">Poznámka souboru</label>
+          <textarea id="fileNoteId" rows="2" placeholder="Poznámka se ukládá automaticky."></textarea>
         </div>
         <section id="issueEditorId" class="issue-editor" aria-label="Vybraná připomínka" hidden>
           <div class="issue-editor-heading"><strong id="selectedIssueTitleId"></strong>

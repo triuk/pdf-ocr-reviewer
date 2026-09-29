@@ -55,6 +55,7 @@ def default_manifest() -> dict[str, Any]:
             "name_filter": "",
             "auto_advance": True,
             "issue_kind": "position",
+            "issue_filter": "all",
         },
         "files": {},
     }

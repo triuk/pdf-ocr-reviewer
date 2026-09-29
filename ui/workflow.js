@@ -230,6 +230,11 @@ function attachEvents() {
     renderFileList();
     saveUiOptions({ status_filter: elements.statusFilterId.value });
   });
+  elements.fileIssueFilterId.addEventListener("change", () => {
+    renderFileList();
+    saveUiOptions({ issue_filter: elements.fileIssueFilterId.value });
+  });
+  elements.reviewRepairsId.addEventListener("click", startRepairReview);
   elements.fileNoteId.addEventListener("input", scheduleSaveNote);
   elements.pageScrollId.addEventListener("scroll", scheduleSaveCurrentPage, { passive: true });
   document.querySelectorAll(".status-button").forEach((button) => {

@@ -83,7 +83,7 @@ input, select, textarea { background: var(--panel); color: var(--text); padding:
   position: relative;
   z-index: 5;
 }
-#folderPathId { min-width: 220px; flex: 1 1 360px; }
+#folderPathId { min-width: 200px; flex: 1 1 230px; }
 .toolbar-field, .switch-field, .zoom-field { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
 .zoom-field input { width: 110px; }
 #zoomValueId { min-width: 46px; color: var(--muted); }
@@ -320,3 +320,5 @@ dialog select { max-width: 100%; margin-bottom: 12px; }
 .column-headings { grid-row: 4; }
 .page-scroll { grid-row: 5; }
 .note-panel { grid-row: 6; }
+
+.file-issue-filter, .review-repairs { margin: 0 10px 8px; max-width: calc(100% - 20px); }

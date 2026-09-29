@@ -378,10 +378,10 @@ After each completed unit of work, this README must be updated:
 ### Current work status
 
 ```text
-Phase: review stages 1–4 implemented; durable draft recovery verified in Chromium
+Phase: review stages 1–5 implemented; preparing the ergonomics acceptance build
 Completed: schema-2 instructions and migration; word/region marks; OCR snapshots and SHA-256 anchors; QA companion references; issue notes, history, filters, counts and colors; confirm/advance, reopen and cancel; external manifest conflict detection and reload
 Verified: automated backend tests and real WebUI/Chromium smoke workflow on a temporary copy of the supplied four-page OCR PDF
-Next action: implement review-work-plan.md stage 5 (cross-document ergonomics)
+Next action: user ergonomics acceptance before stage 6
 Known limitation: no OCR repair engine inside the reviewer; repairs are performed by the separately instructed external tool
 Known limitation: external writers must use the shared revision-checked writer; direct unrelated writes cannot be locked cooperatively
 Known limitation: stale regions must be marked again; no automatic relocation across changed PDFs

@@ -112,19 +112,22 @@ srozumitelně rozlišuje uložený stav, koncept a konflikt.
 
 Priorita: střední. Navazuje na opravenou navigaci.
 
-- [ ] Přidat filtry PDF „Má otevřené připomínky“ a „Čeká na ověření“;
+- [x] Přidat filtry PDF „Má otevřené připomínky“ a „Čeká na ověření“;
       kombinovat je s dosavadním filtrem názvu a stavu souboru.
-- [ ] Rozšířit „Potvrdit a další“ tak, aby po poslední opravě aktuálního PDF
+- [x] Rozšířit „Potvrdit a další“ tak, aby po poslední opravě aktuálního PDF
       našlo další opravu v dalším odpovídajícím souboru.
-- [ ] Zachovat předvídatelné pořadí souborů a připomínek. Po poslední opravě
+- [x] Zachovat předvídatelné pořadí souborů a připomínek. Po poslední opravě
       zobrazit dokončení a nepřecházet bez důvodu dokola.
-- [ ] Zachovat ovládání klávesnicí a fokus; sjednotit nově dotčené popisky
+- [x] Zachovat ovládání klávesnicí a fokus; sjednotit nově dotčené popisky
       do češtiny. Nevyžadovat opakované nastavování typu připomínky.
-- [ ] Ověřit celý průchod opravami přes několik PDF včetně vrácení k opravě,
+- [x] Ověřit celý průchod opravami přes několik PDF včetně vrácení k opravě,
       zrušení a obnovení připomínky, filtrů a neplatné vazby na verzi PDF.
 
 Hotovo, když lze vyfiltrované opravy projít a potvrdit klávesnicí bez ručního
 přepínání souborů a bez přeskakování relevantních položek.
+
+Implementace a automatický průchod přes více PDF jsou hotové. Následuje
+uživatelská zkouška ergonomie; etapu 6 spustit až po jejím vyhodnocení.
 
 ## 6. Výkon autosave a renderování
 

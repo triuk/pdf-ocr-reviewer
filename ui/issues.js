@@ -266,13 +266,63 @@ async function changeIssueStatus(status, issueId = state.selectedIssueId, advanc
     const data = await queueIssueWork(() => callBackend("updateIssueB", fileId, issue.id, JSON.stringify({ status, expected_sha256: hash })));
     applyIssueResponse(data);
     if (state.activeFileId !== fileId) return;
-    if (state.selectedIssueId === issue.id && (status === "verified" || status === "dismissed")) {
-      state.selectedIssueId = (advance && next) || (status === "verified" ? issue.id : null);
-      if (advance && next) await selectIssue(next);
+    if (status === "verified" && advance) {
+      await advanceToNextFixed(next);
+    } else {
+      if (state.selectedIssueId === issue.id && status === "dismissed") {
+        state.selectedIssueId = (advance && next) || null;
+        if (advance && next) await selectIssue(next);
+      }
+      showToast(status === "open" ? "Připomínka vrácena k opravě. PDF se nemění." : status === "verified" ? "Oprava potvrzena." : "Označení zrušeno. Najdete jej ve filtru Zrušené.");
     }
-    showToast(status === "open" ? "Připomínka vrácena k opravě. PDF se nemění." : status === "verified" ? "Oprava potvrzena." : "Označení zrušeno. Najdete jej ve filtru Zrušené.");
   } catch (error) { showToast(error.message, true); }
   finally { state.issueBusy = false; refreshIssueViews(); }
+}
+
+function fixedIssuesInDocument() {
+  return (state.document?.issues || []).filter(issue => issue.status === "fixed")
+    .sort((a, b) => a.page_index - b.page_index || a.bbox[1] - b.bbox[1] || a.bbox[0] - b.bbox[0]);
+}
+
+async function advanceToNextFixed(preferredId = null) {
+  if (state.reviewAdvancing) return false;
+  state.reviewAdvancing = true;
+  try {
+    const select = async issue => {
+      state.issueFilter = "fixed";
+      elements.issueFilterId.value = "fixed";
+      await selectIssue(issue.id);
+      // Keep C/J/K usable after clicking a toolbar button or changing documents.
+      document.activeElement?.blur();
+      showToast(issue.stale || issue.invalid_target ? "Toto označení vyžaduje nové přiřazení k PDF; nelze je potvrdit." : "Další oprava k ověření · C potvrdit · R vrátit");
+      return true;
+    };
+    const remaining = fixedIssuesInDocument();
+    const visibleFiles = filteredFiles();
+    if (remaining.length && visibleFiles.some(file => file.file_id === state.activeFileId)) {
+      return await select(remaining.find(issue => issue.id === preferredId) || remaining[0]);
+    }
+    const start = state.files.findIndex(file => file.file_id === state.activeFileId);
+    const ordered = [...state.files.slice(start + 1), ...state.files.slice(0, Math.max(0, start))];
+    const eligible = new Set(visibleFiles.map(file => file.file_id));
+    for (const file of ordered) {
+      if (!eligible.has(file.file_id) || !file.issue_counts?.fixed) continue;
+      if (!await openDocumentF(file.file_id)) return false;
+      const issue = fixedIssuesInDocument()[0];
+      if (issue) return await select(issue);
+    }
+    showToast("V aktuálním výběru už nejsou další opravy k ověření.");
+    return false;
+  } finally { state.reviewAdvancing = false; }
+}
+
+async function startRepairReview() {
+  if (state.navigating || state.issueBusy || state.reviewAdvancing) return;
+  if (!await flushIssueDraft() || !await flushFileNote()) return;
+  elements.fileIssueFilterId.value = "fixed";
+  await saveUiOptions({issue_filter: "fixed"});
+  renderFileList();
+  await advanceToNextFixed();
 }
 
 function setMarking(enabled) {
@@ -383,7 +433,8 @@ function attachIssueEvents() {
 function handleIssueKeyboard(event) {
   if (event.ctrlKey || event.metaKey || event.altKey) return false;
   const key = event.key.toLowerCase();
-  if (key === "m") setMarking(!state.marking);
+  if (key === "v") startRepairReview();
+  else if (key === "m") setMarking(!state.marking);
   else if (key === "escape") setMarking(false);
   else if (key === "[" || key === "k") navigateIssue(-1);
   else if (key === "]" || key === "j") navigateIssue(1);

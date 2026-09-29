@@ -1,15 +1,18 @@
 function filteredFiles() {
   const nameFilter = elements.nameFilterId.value.trim().toLocaleLowerCase("cs");
   const statusFilter = elements.statusFilterId.value;
+  const issueFilter = elements.fileIssueFilterId?.value || "all";
   return state.files.filter((file) => {
     const nameMatch = !nameFilter || file.name.toLocaleLowerCase("cs").includes(nameFilter);
     const statusMatch = statusFilter === "all" || file.status === statusFilter;
-    return nameMatch && statusMatch;
+    const issueMatch = issueFilter === "all" || (file.issue_counts?.[issueFilter] || 0) > 0;
+    return nameMatch && statusMatch && issueMatch;
   });
 }
 
 function renderFileList() {
   const visible = filteredFiles();
+  if (elements.reviewRepairsId) elements.reviewRepairsId.disabled = !state.files.length;
   elements.fileListId.replaceChildren();
   for (const file of visible) {
     const button = document.createElement("button");
@@ -32,7 +35,7 @@ function renderFileList() {
     meta.className = "file-item-meta";
     const parts = [];
     if (file.problem_page_count) parts.push(`!${file.problem_page_count}`);
-    if (file.changed_since_review) parts.push("changed");
+    if (file.changed_since_review) parts.push("změněno");
     meta.textContent = parts.join(" ");
     if (file.changed_since_review) meta.classList.add("file-changed");
 
@@ -57,8 +60,8 @@ function renderFileList() {
   const counts = Object.fromEntries(["unreviewed", "ok", "error", "needs_review"].map((key) => [key, 0]));
   for (const file of state.files) counts[file.status] = (counts[file.status] || 0) + 1;
   elements.fileSummaryId.textContent = state.folder
-    ? `${state.files.length} PDF · ${counts.unreviewed} unreviewed · ${counts.error} errors`
-    : "No folder is open.";
+    ? `${visible.length} / ${state.files.length} PDF · ${counts.unreviewed} nekontrolováno · ${counts.error} chyb`
+    : "Není otevřená složka.";
 }
 
 function statusSymbol(status) {

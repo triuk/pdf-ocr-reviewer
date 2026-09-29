@@ -15,6 +15,7 @@ const state = {
     name_filter: "",
     auto_advance: true,
     issue_kind: "position",
+    issue_filter: "all",
   },
   activeFileId: null,
   document: null,
@@ -38,6 +39,7 @@ const state = {
   issueSaveTimer: null,
   issueQueue: Promise.resolve(),
   issueBusy: false,
+  reviewAdvancing: false,
   draftRecords: new Map(),
   journalQueue: Promise.resolve(),
   journalPending: 0,
@@ -49,7 +51,7 @@ function bindElements() {
   const ids = [
     "selectFolderId", "folderPathId", "openPathId", "refreshFolderId", "exportCsvId", "saveStateId",
     "ocrModeId", "overlayId", "zoomId", "zoomValueId", "nameFilterId",
-    "statusFilterId", "fileSummaryId", "fileListId", "documentNameId",
+    "statusFilterId", "fileIssueFilterId", "reviewRepairsId", "fileSummaryId", "fileListId", "documentNameId",
     "documentMetaId", "pageScrollId", "emptyStateId", "pagesId",
     "fileNoteId", "toastId",
     "issueSidebarId", "issueFilterId", "issueSummaryId", "issueListId",
@@ -130,7 +132,7 @@ async function syncStateF() {
   applyPublicState(data);
   if (data.startup_error) showToast(data.startup_error.message, true);
   if (data.persistence_error) setSaveState(data.persistence_error.message, true);
-  else if (data.folder) setSaveState("Manifest is writable", false);
+  else if (data.folder) setSaveState("Manifest lze ukládat", false);
   if (state.ui.last_file && state.files.some((file) => file.file_id === state.ui.last_file)) {
     await openDocumentF(state.ui.last_file);
   }
@@ -151,6 +153,7 @@ function applyPublicState(data) {
     applyZoom(false);
     elements.nameFilterId.value = state.ui.name_filter || "";
     elements.statusFilterId.value = state.ui.status_filter || "all";
+    elements.fileIssueFilterId.value = state.ui.issue_filter || "all";
     state.issueKind = state.ui.issue_kind || "position";
     elements.issueKindId.value = state.issueKind;
     renderFileList();

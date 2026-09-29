@@ -116,3 +116,17 @@ its current saved counterpart. **Použít koncept** explicitly applies it to the
 visible revision; **Ponechat uložené** discards that local draft. Missing files or
 issues keep their drafts available for copying. A successful old save only
 acknowledges its own draft token and cannot erase newer typing.
+
+## Review across files
+
+The PDF filters combine name, file status and issue state. **Má otevřené
+připomínky** selects PDFs with open issues; **Čeká na ověření** selects those with
+fixed issues. Arrow navigation and file-status auto-advance honor those filters.
+
+**Ověřit opravy · V** starts a review of fixed issues while retaining the name
+and file-status filters. **C** confirms and selects the next fixed issue,
+continuing into the next eligible PDF. Remaining earlier files are visited only
+if they still have fixes awaiting review. After the final fix, the app stays on
+the last reviewed document and reports completion. Stale or geometrically
+invalid targets remain visible and cannot be confirmed. **R** only reopens the
+selected issue; it never reverses a PDF edit.
