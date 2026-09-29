@@ -5,6 +5,10 @@ implemented; see [the schema-2 repair contract](region-review.md). The phase lis
 below retain the original prototype plan. Current verification is recorded in
 section 17.
 
+The next work is defined in the [post-review work plan](review-work-plan.md)
+(2026-09-29): integrity fixes, reliable navigation, recovery, ergonomics and
+measured performance improvements. Implementation of that plan has not started.
+
 ## 8. Loading, virtualization, and memory
 
 ### Principles
@@ -374,10 +378,10 @@ After each completed unit of work, this README must be updated:
 ### Current work status
 
 ```text
-Phase: region review and external repair handoff implemented
+Phase: post-review work plan prepared; implementation not started
 Completed: schema-2 instructions and migration; word/region marks; OCR snapshots and SHA-256 anchors; QA companion references; issue notes, history, filters, counts and colors; confirm/advance, reopen and cancel; external manifest conflict detection and reload
 Verified: automated backend tests and real WebUI/Chromium smoke workflow on a temporary copy of the supplied four-page OCR PDF
-Next action: use the workflow for a real external repair batch and review the returned marks
+Next action: begin review-work-plan.md stage 1 with a concurrent-write regression test and the shared manifest writer/locking protocol
 Known limitation: no OCR repair engine inside the reviewer; repairs are performed by the separately instructed external tool
 Known limitation: concurrent writes are detected optimistically; close the reviewer during repair batches when possible
 Known limitation: stale regions must be marked again; no automatic relocation across changed PDFs
@@ -409,6 +413,7 @@ Known limitation: Windows acceptance and long-document performance remain unveri
 
 | Date | Work performed | Result |
 |---|---|---|
+| 2026-09-29 | Created the post-review work plan and linked the current next step | Seven review findings and testing, recovery, ergonomics and performance improvements are planned; application code unchanged |
 | 2026-09-25 | Generalized the box-size issue label and added an on-box cancel button | Covers undersized boxes and allows one-click cancellation in reading or marking mode |
 | 2026-09-25 | Added region review, schema migration, repair contract, revision guards, colors and keyboard workflow | Backend tests and real WebUI browser smoke pass; original PDF unchanged |
 | 2026-08-04 | Inspected the supplied ZIP, main Python backend, HTML, JavaScript, CSS, and Git metadata | Identified elements reusable for `pdf-ocr-reviewer` |

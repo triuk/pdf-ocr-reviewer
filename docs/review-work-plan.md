@@ -1,0 +1,178 @@
+# Plán práce po code review
+
+Datum: 2026-09-29. Výchozí revize: `02afcfb` (`v0.1.4`).
+Stav: plán připraven; implementace následujících etap nezačala.
+
+Plán pokrývá sedm nálezů z celkového code review a navržená vylepšení
+testování, ergonomie, zotavení po chybě a výkonu. Nejvyšší prioritu má
+ochrana připomínek a výsledků oprav, poté správnost ovládání.
+
+## Zachované požadavky
+
+- `pdf-ocr-reviewer.manifest.json` zůstává společným zadáním a evidencí oprav.
+- Krátký prompt s rozsahem PDF zůstává dostačující; technický postup popisuje
+  aktuální `repair_instructions` v manifestu.
+- Reviewer sám neupravuje PDF. Vrácení opravy znovu otevírá připomínku.
+- Zachovat stavy open/fixed/verified/dismissed, historii, barevné označení,
+  klávesové zkratky, název „Špatná velikost boxu“ a křížek přímo na boxu.
+- Zachovat načítání dosavadních manifestů i neznámá rozšiřující pole.
+- Zálohy a neuložené koncepty jsou pomocná data; platné zadání oprav zůstává
+  v manifestu. Jejich umístění a obnova budou dokumentované.
+
+## 1. Bezpečný zápis a validace manifestu
+
+Priorita: nejvyšší. Řeší nálezy 1, 4 a 7; podmínka pro další úpravy persistence.
+
+- [ ] Přidat regresní test zápisu druhého procesu mezi kontrolou revize a
+      nahrazením manifestu.
+- [ ] Zavést společný zápisový helper a protokol zamčení pro reviewer i externí
+      opravný nástroj. Kontrola očekávané revize a atomický zápis proběhnou pod
+      týmž zámkem. Konflikt nesmí být vyřešen slepým opakováním nad novou revizí.
+- [ ] Ošetřit souběh dvou instancí, timeout zámku a ukončení procesu; ověřit
+      chování na Linuxu i Windows. Nepodporovaný zámek nesmí tiše vypnout ochranu.
+- [ ] Zpřístupnit helper externímu opravnému postupu a aktualizovat instrukce
+      i dokumentaci. Popsat hranici ochrany: nespolupracující přímý zápis cizího
+      programu nelze tímto protokolem plně zabezpečit.
+- [ ] Doplnit typovou validaci všech známých používaných polí, včetně resources,
+      identity, poznámek a nastavení UI. Chyby musí obsahovat cestu k poli a
+      skončit řízenou odpovědí API. Neznámá pole zachovat.
+- [ ] Při otevření PDF ověřit použitelnost odkazů na stránky a geometrii
+      připomínek; neplatná připomínka nesmí vypadat jako platná k potvrzení.
+- [ ] Změny nastavení validovat nad kopií a převzít až jako celek. Odmítnutý
+      požadavek nesmí změnit paměť ani později prosáknout na disk.
+- [ ] Aktualizovat starší vestavěné repair_instructions řízenou migrací;
+      zachovat uživatelská rozšíření a popsat změnu protokolu.
+
+Hotovo, když testy souběhu neztratí cizí změny, chybná data mají srozumitelné
+chyby a odmítnuté operace nezmění stav. Ověřit také starší manifesty,
+neznámá pole, složku pouze pro čtení a selhání zápisu.
+
+## 2. Spolehlivé přepínání dokumentů a opožděné odpovědi
+
+Priorita: vysoká. Řeší nálezy 2 a 3.
+
+- [ ] Zavést jednotný kontext požadavku: identita otevřené složky, soubor,
+      generace dokumentu a podle operace revize PDF/manifestu.
+- [ ] Opravit stav souboru, problémové stránky, ukládání poznámek, odpovědi
+      připomínek a automatický přechod. Odpověď patří původnímu kontextu;
+      nesmí změnit mezitím otevřený dokument ani spustit jeho navigaci.
+- [ ] Ošetřit stejný název PDF ve dvou různých složkách i více rychlých
+      požadavků na otevření. Ochranu kontextu uplatnit také na backendu.
+- [ ] Nový dokument otevřít a ověřit před výměnou aktivního. Při selhání
+      zachovat původní plně funkční dokument, nebo zobrazit jednoznačný prázdný
+      stav, pokud původní kontext už neexistuje.
+- [ ] Zamezit ztrátě novějšího konceptu při dokončení staršího autosave.
+- [ ] Přidat deterministické JS testy s řízeným pořadím odpovědí a integrační
+      scénáře přepnutí během zápisu, reloadu a chyby otevření PDF.
+
+Hotovo, když rychlé přepínání nemění cizí soubor ani neztrácí text a po chybě
+otevření odpovídají zobrazený dokument, jeho ovládání a backend stejnému stavu.
+
+## 3. Navigace podle filtrů a správné rozlišení stránek
+
+Priorita: střední. Řeší nálezy 5 a 6. Navazuje na kontext požadavků z etapy 2.
+
+- [ ] Sdílet výběr souborů mezi seznamem, šipkami a automatickým přechodem.
+      Zohlednit aktivní filtry, prázdný výsledek i soubor, který po změně stavu
+      z právě použitého filtru zmizí.
+- [ ] Zavést revizi renderu nebo explicitní požadované rozlišení. Změna zoomu
+      zneplatní rozpracované obrázky v nesprávném rozlišení a zajistí nové načtení.
+- [ ] Zachovat správnou polohu OCR a připomínek při změně zoomu; staré výsledky
+      nesmějí nahrazovat novější ani hromadit Blob URL.
+- [ ] Přidat testy kombinovaných filtrů, automatického přechodu, rychlých
+      změn zoomu a zpožděných obrazových paketů.
+
+Hotovo, když navigace prochází pouze odpovídající soubory a po dokončení
+načítání viditelné stránky odpovídají poslednímu zoomu.
+
+## 4. Zotavení po chybě a restartu
+
+Priorita: střední. Navazuje na bezpečný zápis a kontext dokumentů.
+
+- [ ] Uchovávat omezený počet ověřených záloh manifestu. Chybný manifest nesmí
+      přepsat poslední použitelnou zálohu; obnova nesmí tiše zahodit novější stav.
+- [ ] Průběžně ukládat rozepsané poznámky do lokálního úložiště aplikace,
+      nezávislého na dostupnosti sdíleného manifestu a náhodném portu WebUI.
+- [ ] Koncepty jednoznačně přiřadit ke složce, PDF, připomínce a výchozí revizi.
+      Smazat je teprve po potvrzeném zápisu odpovídajícího obsahu.
+- [ ] Po restartu nabídnout obnovený koncept přímo v příslušném editoru.
+      Při souběžné úpravě nebo chybějící připomínce zachovat oba texty a umožnit
+      jejich vyřešení bez tichého přepsání.
+- [ ] Ověřit restart s neuloženou poznámkou, změnu PDF, chybějící soubor,
+      poškozený manifest a nedostatek oprávnění k zápisu.
+
+Hotovo, když lze obnovit neuložený text i poslední platný manifest a aplikace
+srozumitelně rozlišuje uložený stav, koncept a konflikt.
+
+## 5. Rychlejší kontrola oprav napříč PDF
+
+Priorita: střední. Navazuje na opravenou navigaci.
+
+- [ ] Přidat filtry PDF „Má otevřené připomínky“ a „Čeká na ověření“;
+      kombinovat je s dosavadním filtrem názvu a stavu souboru.
+- [ ] Rozšířit „Potvrdit a další“ tak, aby po poslední opravě aktuálního PDF
+      našlo další opravu v dalším odpovídajícím souboru.
+- [ ] Zachovat předvídatelné pořadí souborů a připomínek. Po poslední opravě
+      zobrazit dokončení a nepřecházet bez důvodu dokola.
+- [ ] Zachovat ovládání klávesnicí a fokus; sjednotit nově dotčené popisky
+      do češtiny. Nevyžadovat opakované nastavování typu připomínky.
+- [ ] Ověřit celý průchod opravami přes několik PDF včetně vrácení k opravě,
+      zrušení a obnovení připomínky, filtrů a neplatné vazby na verzi PDF.
+
+Hotovo, když lze vyfiltrované opravy projít a potvrdit klávesnicí bez ručního
+přepínání souborů a bez přeskakování relevantních položek.
+
+## 6. Výkon autosave a renderování
+
+Priorita: po dokončení správnosti. Optimalizace podložit měřením.
+
+- [ ] Změřit latenci uložení, počty zápisů, dobu hashování a odezvu při
+      renderování na velkém PDF i manifestu s mnoha připomínkami a historií.
+- [ ] Sloučit zbytečně časté zápisy nastavení a autosave při zachování
+      spolehlivého dokončení před přechodem mezi kontexty.
+- [ ] Omezit kopírování celého manifestu, vracení všech připomínek a
+      překreslování seznamů tam, kde měření prokáže dopad.
+- [ ] Navrhnout opětovné použití ověřeného hashe pouze s jasnými pravidly
+      zneplatnění. Nezaměnit pouhou shodu velikosti a času souboru za záruku
+      shodného obsahu; zachovat kontrolu verze před potvrzením opravy.
+- [ ] Omezit frontu nepotřebných renderů a velikost výsledného rastru podle
+      počtu pixelů. Změnu renderovací architektury provést jen při doložené potřebě.
+- [ ] Zapsat srovnání před/po na stejných datech a ověřit regresní scénáře.
+
+Hotovo, když měření doloží přínos změn a zůstanou splněny podmínky integrity
+dat, detekce změněného PDF a omezené spotřeby paměti.
+
+## 7. Automatické kontroly, dokumentace a vydání
+
+Testy doplňovat průběžně v etapách 1–6; tato etapa dokončí jejich zapojení a
+ověří celý výsledek.
+
+- [ ] Zařadit Python a JS regresní testy do CI; souborové zámky testovat
+      na Linuxu i Windows.
+- [ ] Zařadit prohlížečový smoke test přes skutečné WebUI na Linuxu.
+      Používat malé syntetické PDF, včetně otočené/oříznuté stránky;
+      uživatelovo PDF nesmí být nutnou součástí CI.
+- [ ] Zachovat self-test zdrojové aplikace a obou zabalených binárek.
+- [ ] Ověřit integračně externí opravu, načtení výsledků, potvrzení,
+      znovuotevření připomínky a obnovu po konfliktu či restartu.
+- [ ] Aktualizovat popis manifestu, API, klávesových zkratek, záloh a externího
+      zápisového postupu; uvést skutečně ověřené platformy a známé limity.
+- [ ] Připravit release poznámky a vydání až po splnění přejímacích podmínek.
+
+## Postup práce a další krok
+
+Každou etapu rozdělit do samostatně kontrolovatelných commitů; změnu chování
+spojit s příslušným regresním testem. Po dokončení aktualizovat tento checklist
+i stav v `implementation-plan.md`. Odhad výkonu ani experiment neoznačovat
+za hotovou funkci bez ověření.
+
+Etapy 1–3 tvoří první celek oprav potvrzených chyb. Etapy 4–6 přidávají
+odsouhlasená vylepšení. Etapa 7 je společná podmínka vydání.
+
+Nejbližší konkrétní krok: přidat regresní test souběžného zápisu manifestu,
+navrhnout společné rozhraní zápisového helperu a jeho zámku a začít etapou 1.
+
+Výchozí ověření z code review 2026-09-28: 42 úspěšných Python testů,
+aplikační self-test a prohlížečový smoke test na dočasné kopii dodaného PDF.
+Sedm nálezů bylo reprodukováno samostatně; tyto reprodukce je potřeba převést
+do trvalých regresních testů.

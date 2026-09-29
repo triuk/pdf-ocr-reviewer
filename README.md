@@ -133,5 +133,6 @@ The result is `dist/pdf-ocr-reviewer` on Linux or `dist/pdf-ocr-reviewer.exe` on
 - [Backend API](docs/backend-api.md)
 - [Rendered page transport](docs/page-transport.md)
 - [Implementation plan, tests, work status, and next steps](docs/implementation-plan.md)
+- [Post-review work plan (2026-09-29)](docs/review-work-plan.md)
 
 Detailed work status, the decision log, and the exact next step are maintained in the second document so development can resume after an interruption without reconstructing prior work from memory.
