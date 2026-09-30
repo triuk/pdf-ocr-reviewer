@@ -257,10 +257,18 @@ async function changeIssueStatus(status, issueId = state.selectedIssueId) {
   renderIssueEditor();
   try {
     if (!await flushIssueDraft()) return;
+    const visible = filteredIssues().filter(item => ["open", "fixed"].includes(item.status));
+    const index = visible.findIndex(item => item.id === issue.id);
+    const following = [...visible.slice(index + 1), ...visible.slice(0, Math.max(index, 0))]
+      .find(item => item.id !== issue.id)?.id || null;
     const data = await queueIssueWork(() => callBackend("updateIssueB", fileId, issue.id, JSON.stringify({ status, expected_sha256: hash })));
     applyIssueResponse(data);
     if (state.activeFileId !== fileId) return;
-    if (status === "dismissed" && state.selectedIssueId === issue.id) state.selectedIssueId = null;
+    if (status === "dismissed") {
+      await selectIssue(following);
+      // Keep successive X presses working even after deleting with the mouse.
+      document.activeElement?.blur();
+    }
     if (status === "open") {
       state.issueFilter = "active";
       elements.issueFilterId.value = "active";

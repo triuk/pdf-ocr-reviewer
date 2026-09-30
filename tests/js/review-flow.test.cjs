@@ -29,6 +29,7 @@ test('deleting another repaired box preserves selection; restoring from archive 
   c.state.document.issues=[retained,removed];c.state.selectedIssueId='keep';
   c.elements.issueFilterId={value:'active'};
   c.renderIssueEditor=()=>{};c.refreshIssueViews=()=>{};c.flushIssueDraft=async()=>true;
+  c.selectIssue=async id=>{c.state.selectedIssueId=id;};
   const calls=[];
   c.callBackend=async(name,file,id,patch)=>{
     calls.push({name,id,patch:JSON.parse(patch)});
@@ -57,4 +58,26 @@ test('browsing repaired marks does not change status and old approval shortcuts 
     assert.equal(c.handleIssueKeyboard({key,preventDefault(){throw Error('Old shortcut still active');}}),false);
   }
   assert.ok(c.state.document.issues.every(i=>i.status==='fixed'));
+});
+
+test('deletion advances in filtered order, wraps, and clears the final selection only after save',async()=>{
+  const c=app(['state.js','issues.js']);
+  c.state.document.issues=[issue('first','fixed',0),issue('excluded','open',1),
+    issue('middle','fixed',2),issue('last','fixed',3)];
+  c.state.issueFilter='fixed';c.state.selectedIssueId='middle';
+  c.renderIssueEditor=()=>{};c.refreshIssueViews=()=>{};c.flushIssueDraft=async()=>true;
+  const selected=[];c.selectIssue=async id=>{selected.push(id);c.state.selectedIssueId=id;};
+  c.callBackend=async(name,file,id,patch)=>{
+    Object.assign(c.state.document.issues.find(i=>i.id===id),JSON.parse(patch));
+    return {file_id:file,issues:c.state.document.issues,issue_counts:{}};
+  };
+  await c.changeIssueStatus('dismissed');assert.equal(c.state.selectedIssueId,'last');
+  await c.changeIssueStatus('dismissed');assert.equal(c.state.selectedIssueId,'first');
+  const save=c.callBackend;c.callBackend=async()=>{throw Error('conflict');};
+  await c.changeIssueStatus('dismissed');assert.equal(c.state.selectedIssueId,'first');
+  assert.equal(c.state.document.issues[0].status,'fixed');
+  c.callBackend=save;
+  await c.changeIssueStatus('dismissed');assert.equal(c.state.selectedIssueId,null);
+  assert.deepEqual(selected,['last','first',null]);
+  assert.equal(c.state.document.issues[1].status,'open');
 });
