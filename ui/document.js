@@ -46,9 +46,8 @@ function clearDocument() {
   releasePageResources();
   state.activeFileId = null;
   state.document = null;
+  document.title = "PDF OCR Reviewer";
   state.selectedIssueId = null;
-  elements.documentNameId.textContent = "Vyberte PDF";
-  elements.documentMetaId.textContent = "";
   elements.pagesId.replaceChildren();
   elements.emptyStateId.hidden = false;
   elements.fileNoteId.value = "";
@@ -58,9 +57,8 @@ function clearDocument() {
 
 function renderDocumentShell() {
   const doc = state.document;
+  document.title = `${doc.name} — PDF OCR Reviewer`;
   elements.pageScrollId.scrollTop = 0;
-  elements.documentNameId.textContent = doc.name;
-  elements.documentMetaId.textContent = `${doc.page_count} stran`;
   elements.emptyStateId.hidden = true;
   elements.pagesId.replaceChildren();
 

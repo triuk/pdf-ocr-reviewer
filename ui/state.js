@@ -52,8 +52,8 @@ function bindElements() {
   const ids = [
     "selectFolderId", "folderPathId", "openPathId", "refreshFolderId", "exportCsvId", "saveStateId", "moreActionsId",
     "ocrModeId", "overlayId", "zoomId", "zoomValueId", "nameFilterId",
-    "statusFilterId", "fileIssueFilterId", "fileSummaryId", "fileListId", "documentNameId",
-    "documentMetaId", "pageScrollId", "emptyStateId", "pagesId",
+    "statusFilterId", "fileIssueFilterId", "fileSummaryId", "fileListId",
+    "pageScrollId", "emptyStateId", "pagesId",
     "fileNoteId", "toastId",
     "issueSidebarId", "issueFilterId", "issueSummaryId", "issueListId",
     "markIssueId", "issueKindId", "previousIssueId", "nextIssueId", "markHintId",

@@ -7,7 +7,8 @@ It closes after selecting an action, clicking outside or pressing Escape.
 Each file in the left list has its own **OK** checkbox. This
 records completion of the whole-file inspection and can be unchecked. It neither
 resolves region issues nor changes PDFs. It works on unopened files without
-switching the displayed document. The adjacent filename button opens the PDF.
+switching the displayed document. The adjacent filename button opens the PDF. Its name appears in the window title;
+there is no separate filename/page-count row above the marking controls.
 Legacy file classifications remain stored for compatibility, but have no buttons.
 
 The sidebar shows filenames, inspection completion and issue counts, with filters
