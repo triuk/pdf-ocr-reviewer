@@ -76,8 +76,9 @@ pytest
 
 ## Whole-file review
 
-**Zkontrolováno** records that you have finished inspecting the whole PDF, even
-if issues remain. It saves immediately and stays on the current file. The sidebar
+**OK**, next to each filename in the left list, records that you have finished
+inspecting that PDF, even if issues remain. It saves immediately without opening
+or switching documents. Clicking the filename still opens the PDF. The sidebar
 filters and counts distinguish completed and unfinished inspections; issue counts
 remain separate. **Obnovit** reloads external changes. Backups and CSV export are
 under **Další**, which closes after selection, an outside click or Escape.
@@ -98,7 +99,9 @@ also mark the spatial OCR pane.
 
 The sidebar shows counts and a filterable list. **J/K** move between marks and
 **N** focuses the selected mark's note; **X** deletes the selected mark, like its
-box cross. Red means **K opravě**, blue means **Po opravě**.
+box cross, and selects the next mark in the current PDF/filter. At the end it
+wraps to the first remaining mark; deleting the final one clears the selection.
+Red means **K opravě**, blue means **Po opravě**.
 After checking an external repair, delete a satisfactory mark with the **× directly
 on its box**. Leave an unsatisfactory mark in place for the next external pass;
 no confirmation or reopening is needed. Both red and blue marks remain repair

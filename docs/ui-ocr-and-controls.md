@@ -29,7 +29,7 @@ The **Overlay** switch displays semi-transparent OCR objects or their rectangles
 | `F` | fit to width |
 | `Ctrl+G` | go to a specified page |
 | `N` | open or focus the note |
-| `X` | delete the selected mark, like × on its box; recoverable from Archiv |
+| `X` | delete the selected mark and select the next in the filter, like × on its box; recoverable from Archiv |
 | `M` | toggle word/region marking; click a word or drag a rectangle |
 | `Esc` | return to text selection / cancel an active rectangle |
 | `J` / `K` | next / previous issue in the current filter (`]` / `[` also work) |
@@ -39,8 +39,8 @@ Shortcuts do not intercept typing in inputs. Shift + drag marks an area over an
 existing issue. Marking also works in the right-hand Layout pane. Issue colors and
 labels are independent of the ordinary OCR overlay switch.
 
-Use the **Zkontrolováno** checkbox to record a completed whole-file inspection.
-It does not advance to another file. The former 0–3 classification shortcuts are removed.
+Use the **OK** checkbox beside each filename in the left list to record a completed whole-file inspection.
+It does not open or switch PDF files. The former 0–3 classification shortcuts are removed.
 
 ---
 
@@ -48,3 +48,7 @@ OCR passes run outside the reviewer using the manifest. Red and blue marks both
 remain requests for the next pass. Delete satisfactory marks with × on the box;
 leave other marks in place. Deleted and legacy confirmed marks are in Archiv,
 where Obnovit označení restores a request without changing PDF content.
+
+After deletion, the next mark is selected and scrolled into view in the current
+PDF and filter. At the end, selection wraps to the first remaining mark. With no
+remaining marks, selection clears; deletion never jumps to a different PDF.

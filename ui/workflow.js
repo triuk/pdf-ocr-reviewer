@@ -1,23 +1,17 @@
-async function setReviewCompleteF(complete) {
-  if (!state.document || state.navigating || state.reviewBusy) return;
+async function setReviewCompleteF(complete, fileId = state.activeFileId) {
+  const file = state.files.find(item => item.file_id === fileId);
+  if (!file || state.navigating || state.reviewBusy) return;
+  const payload = { complete, expected_identity: file.identity_token };
+  if (fileId === state.activeFileId && state.document) payload.expected_sha256 = state.document.ocr_sha256;
   state.reviewBusy = true;
-  const fileId = state.activeFileId;
-  const hash = state.document.ocr_sha256;
-  renderReviewComplete();
+  renderFileList();
   try {
-    const data = await callBackend("setReviewCompleteB", fileId, JSON.stringify({ complete, expected_sha256: hash }));
-    const file = state.files.find((item) => item.file_id === fileId);
-    if (file) Object.assign(file, data);
-    state.document.review_complete = data.review_complete;
-    renderFileList();
+    const data = await callBackend("setReviewCompleteB", fileId, JSON.stringify(payload));
+    Object.assign(file, data);
+    if (fileId === state.activeFileId && state.document) state.document.review_complete = data.review_complete;
     setSaveState("Manifest uložen", false);
   } catch (error) { showToast(error.message, true); }
-  finally { state.reviewBusy = false; renderReviewComplete(); }
-}
-
-function renderReviewComplete() {
-  elements.reviewCompleteId.checked = Boolean(state.document?.review_complete);
-  elements.reviewCompleteId.disabled = !state.document || state.reviewBusy;
+  finally { state.reviewBusy = false; renderFileList(); }
 }
 
 async function toggleProblemPageF(pageIndex, button) {
@@ -239,7 +233,6 @@ function attachEvents() {
   });
   elements.fileNoteId.addEventListener("input", scheduleSaveNote);
   elements.pageScrollId.addEventListener("scroll", scheduleSaveCurrentPage, { passive: true });
-  elements.reviewCompleteId.addEventListener("change", () => setReviewCompleteF(elements.reviewCompleteId.checked));
   elements.moreActionsId.addEventListener("click", (event) => {
     if (event.target.closest("button")) elements.moreActionsId.open = false;
   });

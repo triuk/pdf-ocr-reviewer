@@ -21,7 +21,6 @@ async function openDocumentNow(fileId, afterReload = false) {
     state.pageData.clear();
     renderFileList();
     renderDocumentShell();
-    renderReviewComplete();
     elements.fileNoteId.value = documentData.note || "";
     if (state.fileNoteDraft?.fileId === fileId && state.fileNoteDraft.folder === state.folder) {
       elements.fileNoteId.value = state.fileNoteDraft.note;
@@ -47,7 +46,6 @@ function clearDocument() {
   releasePageResources();
   state.activeFileId = null;
   state.document = null;
-  renderReviewComplete();
   state.selectedIssueId = null;
   elements.documentNameId.textContent = "Vyberte PDF";
   elements.documentMetaId.textContent = "";

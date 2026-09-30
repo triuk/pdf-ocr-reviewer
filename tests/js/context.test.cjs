@@ -9,13 +9,12 @@ const ok = data=>JSON.stringify({ok:true,data});
 test('late completion response cannot mark the newly opened PDF', async()=>{
   const c=app();const d=deferred();
   c.webui={isConnected:()=>true,setReviewCompleteB:()=>d.promise};
-  c.elements.reviewCompleteId={};
   c.state.files=[{file_id:'a.pdf',review_complete:false},{file_id:'b.pdf',review_complete:false}];
   const job=c.setReviewCompleteF(true);
   c.state.activeFileId='b.pdf';c.state.document={document_id:'doc-B',review_complete:false};
   d.resolve(ok({file_id:'a.pdf',review_complete:true}));await job;
   assert.equal(c.state.files[1].review_complete,false);assert.equal(c.state.document.review_complete,false);
-  assert.equal(c.elements.reviewCompleteId.checked,false);
+  assert.equal(c.state.files[0].review_complete,true);
 });
 
 test('same name in another folder rejects an old response', async()=>{

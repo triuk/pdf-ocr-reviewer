@@ -108,7 +108,7 @@ def main():
             session = created["sessionId"]
             command("/url", {"url": url})
             wait_for("typeof state !== 'undefined' && state.files.length === 1")
-            click(".file-item")
+            click(".file-item .file-open")
             wait_for("state.pageData.has(0)")
             click("#markIssueId")
             js("elements.issueKindId.value='oversized';elements.issueKindId.dispatchEvent(new Event('change')); ")
@@ -135,12 +135,13 @@ def main():
             pointer(rect[0], rect[1], rect[2:])
             wait_for("state.document?.issues.length === 3")
             third_id = js("return state.selectedIssueId;")
-            # The on-box cross also works on an unselected issue without changing selection.
+            # The on-box cross selects the next retained issue in geometric order.
             js(f"selectIssue({json.dumps(second_id)}, false);")
             wait_for("state.selectedIssueId === " + json.dumps(second_id))
             click(f'.scan-pane .issue-box[data-issue-id="{third_id}"] .issue-box-dismiss')
             wait_for("state.document?.issue_counts.dismissed === 1")
-            assert js("return state.selectedIssueId;") == second_id
+            wait_for("!state.issueBusy")
+            assert js("return Boolean(selectedIssue() && selectedIssue().status !== 'dismissed');")
             js("state.issueFilter='archived';elements.issueFilterId.value='archived';renderIssueSidebar();")
             click(".issue-list-item")
             click("#reopenIssueId")
@@ -172,14 +173,14 @@ def main():
             # Whole-file completion is independent of retained issues and reversible.
             assert js("return elements.refreshFolderId.textContent;") == "Obnovit"
             assert not js("return Boolean(document.querySelector('.status-button'));")
-            click("#reviewCompleteId")
+            click(".file-item.selected .file-ok input")
             wait_for("!state.reviewBusy && state.document.review_complete")
             assert js("return state.document.issue_counts.fixed;") == 2
             assert load_manifest(folder)["files"][pdf.name]["review_complete"] is True
             click("#refreshFolderId")
             wait_for("!state.navigating && state.document?.review_complete && state.pageData.has(0)")
-            assert js("return elements.reviewCompleteId.checked;")
-            click("#reviewCompleteId")
+            assert js("return document.querySelector('.file-item.selected .file-ok input').checked;")
+            click(".file-item.selected .file-ok input")
             wait_for("!state.reviewBusy && !state.document.review_complete")
             # Menu opens/closes by keyboard, and export remains available through it.
             click("#moreActionsId summary")
@@ -201,7 +202,8 @@ def main():
             assert js("return selectedIssue().status;") == "fixed"
             js("document.activeElement.blur();")
             command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "x"}, {"type": "keyUp", "value": "x"}]}]})
-            wait_for("state.document?.issue_counts.fixed === 1 && state.document.issue_counts.dismissed === 2")
+            wait_for("state.document?.issue_counts.fixed === 1 && state.document.issue_counts.dismissed === 2 && !state.issueBusy")
+            assert js("return state.selectedIssueId;") == first_id
             assert js("return Boolean(document.querySelector('.scan-pane .issue-fixed'));")
             assert not js("return Boolean(document.querySelector('#verifyIssueId, #reviewRepairsId'));")
             js("document.activeElement.blur();")
@@ -268,15 +270,22 @@ def main():
             assert js("return state.document.issues[0].history.at(-1).previous_result.summary;") == "Test: geometrie opravena"
             js("elements.fileIssueFilterId.value='active';elements.fileIssueFilterId.dispatchEvent(new Event('change')); ")
             assert js("return document.querySelectorAll('.file-item').length;") == 2
+            active_before = js("return state.activeFileId;")
+            click('.file-item[data-file-id="second-ocr.pdf"] .file-ok input')
+            wait_for("!state.reviewBusy && state.files.find(f => f.file_id === 'second-ocr.pdf').review_complete")
+            assert js("return state.activeFileId;") == active_before
+            assert load_manifest(folder)["files"][second.name]["review_complete"] is True
             click(f'.scan-pane .issue-box[data-issue-id="{first_id}"] .issue-box-dismiss')
             wait_for("state.document.issue_counts.fixed === 0 && !state.issueBusy")
+            assert js("return state.selectedIssueId;") is None
             assert js("return document.querySelectorAll('.file-item').length;") == 1
             assert js("return document.querySelector('.file-item').dataset.fileId;") == second.name
-            click(".file-item")
+            click(".file-item .file-open")
             wait_for("state.activeFileId === 'second-ocr.pdf' && state.pageData.has(0) && !state.navigating")
             click("#refreshFolderId")
             wait_for("state.activeFileId === 'second-ocr.pdf' && state.pageData.has(0) && !state.navigating")
             assert js("return state.document.issues[0].status;") == "fixed"
+            assert js("return document.querySelector('.file-item.selected .file-ok input').checked;")
             assert file_sha256(pdf) == before, "Reviewer changed PDF bytes"
             shot = request("GET", f"/session/{session}/screenshot")
             args.screenshot.write_bytes(base64.b64decode(shot))

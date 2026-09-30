@@ -27,7 +27,8 @@ ovládání; nejsou dokladem provedené opravy OCR. Původní PDF se nemění.
    typ další připomínky zůstává zapamatovaný.
 2. **Po externí opravě:** použijte „Obnovit“. V ukázce jsou některá místa
    už modrá. Pokud výsledek vyhovuje, smažte označení × přímo na boxu.
-   Pokud nevyhovuje, prostě ho ponechte; případně doplňte poznámku.
+   Po smazání se vybere další připomínka podle aktuálního filtru; po poslední
+   zbývající se výběr vyprázdní. Pokud nevyhovuje, prostě ho ponechte; případně doplňte poznámku.
 3. **Další průchod:** není potřeba nic potvrzovat ani přebarvovat. Externí
    nástroj podle manifestu zpracuje červená i modrá ponechaná označení.
    Smazaná místa vynechá. Zkušební aplikace sama žádnou OCR opravu nespouští.
@@ -36,8 +37,8 @@ ovládání; nejsou dokladem provedené opravy OCR. Původní PDF se nemění.
    místy v aktuálním PDF, X smaže vybrané označení, N otevře poznámku.
    Omylem smazané označení najdete v „Archiv“ a vrátíte pomocí „Obnovit označení“. Dříve potvrzená označení
    ze staré verze jsou také v Archivu a automaticky se neopravují.
-5. **Dokončená prohlídka:** zaškrtněte „Zkontrolováno“. Připomínky zůstávají
-   a aplikace nepřeskočí jinam. Zrušte zaškrtnutí a zkuste filtr dokončení vlevo.
+5. **Dokončená prohlídka:** zaškrtněte „OK“ u názvu souboru vlevo. Vyzkoušejte
+   i jiný než otevřený soubor: pravá část se nepřepne, připomínky zůstávají. Zrušte zaškrtnutí a zkuste filtr dokončení vlevo.
    V nabídce „Další“ najdete Zálohy a Export CSV; zavře se i přes Esc či klik ven.
 6. **Návrat k práci:** zavřete aplikaci, spusťte ji znovu a zkontrolujte
    ponechaná místa, poznámky a Archiv.
@@ -56,7 +57,7 @@ python tools/create_ergonomics_demo.py /nova/testovaci/slozka --source /cesta/ke
 Bez `--source` vzniknou syntetické PDF. Pro běh ze zdrojů použijte
 `python main.py --folder /nova/testovaci/slozka`.
 
-Lokálně na Linuxu prošlo 73 Python testů a 12 JS scénářů. Skutečný WebUI/Chromium
+Lokálně na Linuxu prošlo 74 Python testů a 13 JS scénářů. Skutečný WebUI/Chromium
 průchod ověřil označení, autosave, smazání/obnovu, ponechané modré označení při
 druhém externím průchodu, filtry přes dvě PDF, konflikt, restart, obnovu poznámky
 a výběr zálohy. Zdrojový i zabalený self-test prošly před předáním binárky.

@@ -74,6 +74,8 @@ oversized and undersized boxes. Existing marks keep their keys and histories.
 
 State transitions preserve prior values and append history. The **× directly on
 each box** deletes it without selecting it first or scrolling to the footer.
+Both the cross and **X** select the next retained mark in the current PDF/filter,
+wrapping to the first remaining mark at the end. If none remain, selection clears.
 A restored issue may have an earlier `result`: that describes the previous attempt.
 
 The application hashes PDFs when opening them and checks the active hash before
@@ -154,7 +156,8 @@ the note. **Obnovit** reloads externally saved PDF and manifest changes.
 
 ## Whole-file completion
 
-`review_complete` records a finished inspection, independently of issue status.
+**OK** beside each filename changes `review_complete`, which records a finished
+inspection independently of issue status. It does not open or switch PDFs.
 Checking it does not exclude retained `open`/`fixed` issues from external passes.
 `review_completed_at` records its time. The UI does not overwrite legacy `status`
 or `reviewed_at`; older `ok` entries default to checked and all other legacy states

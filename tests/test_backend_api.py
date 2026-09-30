@@ -117,3 +117,27 @@ def test_completion_is_independent_of_legacy_status_and_issues(tmp_path):
         assert load_manifest(tmp_path)['files']['one.pdf']['review_complete'] is False
     finally:
         api.close()
+
+
+def test_sidebar_ok_updates_unopened_file_without_switching_and_rejects_stale_identity(tmp_path):
+    import pytest
+    from app.manifest import manifest_revision
+    create_pdf(tmp_path / 'one.pdf', 'First')
+    create_pdf(tmp_path / 'two.pdf', 'Second')
+    api = BackendApi(tmp_path)
+    try:
+        opened = api.open_document('one.pdf')
+        row = next(f for f in api.public_state()['files'] if f['file_id'] == 'two.pdf')
+        assert row['identity_token'] == f"{row['size']}:{row['mtime_ns']}"
+        api.set_review_complete('two.pdf', {'complete': True, 'expected_identity': row['identity_token']})
+        assert api.active_file_id == 'one.pdf'
+        assert api.document_id == opened['document_id']
+        assert load_manifest(tmp_path)['files']['two.pdf']['review_complete'] is True
+        revision = manifest_revision(tmp_path)
+        with (tmp_path / 'two.pdf').open('ab') as file:
+            file.write(b'\n')
+        with pytest.raises(ValueError, match='PDF se změnilo'):
+            api.set_review_complete('two.pdf', {'complete': False, 'expected_identity': row['identity_token']})
+        assert manifest_revision(tmp_path) == revision
+    finally:
+        api.close()

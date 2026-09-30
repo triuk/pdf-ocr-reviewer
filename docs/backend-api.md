@@ -29,10 +29,14 @@ This pattern is adopted from the reference project.
 | `addIssueB(fileId, payloadJson)` | saves a word/region issue with OCR snapshot and PDF version anchor |
 | `updateIssueB(fileId, issueId, patchJson)` | autosaves type/note, deletes (`dismissed`) or restores (`open`) a mark; legacy `verified` remains compatible |
 
-`setReviewCompleteB` accepts `{complete: boolean, expected_sha256: string}` and
-returns the updated public file entry, including `review_complete`. It checks the
-active document context, PDF hash and manifest revision. Completion changes leave
-legacy classification and issue data unchanged. Open-document and file-list data
+`setReviewCompleteB` accepts `{complete: boolean, expected_identity: string}`
+and optional `expected_sha256`; hash-only requests remain compatible. File-list
+responses provide `identity_token`, an exact string of size and mtime_ns, avoiding
+JavaScript timestamp rounding. The callback validates the folder context and
+file identity against both the listed snapshot and disk; a supplied hash is also
+verified. It returns the updated public file entry and never opens/switches PDFs.
+For the active PDF, the frontend supplies its hash as well. Completion changes
+preserve legacy classification and issue data. Open-document and file-list data
 both include `review_complete`. CSV appends `review_complete` and `review_completed_at`.
 
 `addIssueB` accepts `page_index`, `bbox`, `kind`, optional `note`, and

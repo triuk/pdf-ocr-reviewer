@@ -17,18 +17,29 @@ function renderFileList() {
   const visible = filteredFiles();
   elements.fileListId.replaceChildren();
   for (const file of visible) {
+    const row = document.createElement("div");
+    row.className = "file-item";
+    row.dataset.fileId = file.file_id;
+    row.classList.toggle("selected", file.file_id === state.activeFileId);
+    row.setAttribute("role", "listitem");
+
+    const ok = document.createElement("label");
+    ok.className = "file-ok";
+    ok.title = "OK — prohlídka PDF dokončena; připomínky mohou zůstat k opravě";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = Boolean(file.review_complete);
+    checkbox.disabled = state.reviewBusy || state.navigating;
+    checkbox.setAttribute("aria-label", `OK: ${file.name}`);
+    checkbox.addEventListener("change", () => setReviewCompleteF(checkbox.checked, file.file_id));
+    const okText = document.createElement("span");
+    okText.textContent = "OK";
+    ok.append(checkbox, okText);
+
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "file-item";
-    button.dataset.fileId = file.file_id;
-    button.classList.toggle("selected", file.file_id === state.activeFileId);
-    button.setAttribute("role", "option");
-
-    const status = document.createElement("span");
-    status.className = `file-status ${file.review_complete ? "reviewed" : "unreviewed"}`;
-    status.textContent = file.review_complete ? "✓" : "○";
-    status.title = file.review_complete ? "Zkontrolováno" : "Nekontrolováno";
-
+    button.className = "file-open";
+    button.setAttribute("aria-current", file.file_id === state.activeFileId ? "true" : "false");
     const name = document.createElement("span");
     name.className = "file-item-name";
     name.textContent = file.name;
@@ -42,7 +53,7 @@ function renderFileList() {
     meta.textContent = parts.join(" ");
     if (file.changed_since_review) meta.classList.add("file-changed");
 
-    button.append(status, name, meta);
+    button.append(name, meta);
     const counts = file.issue_counts || {};
     if (counts.open || counts.fixed) {
       const summary = document.createElement("span");
@@ -57,12 +68,13 @@ function renderFileList() {
       button.append(summary);
     }
     button.addEventListener("click", () => openDocumentF(file.file_id));
-    elements.fileListId.append(button);
+    row.append(ok, button);
+    elements.fileListId.append(row);
   }
 
   const completed = state.files.filter(file => file.review_complete).length;
   elements.fileSummaryId.textContent = state.folder
-    ? `${visible.length} / ${state.files.length} PDF · zkontrolováno ${completed} z ${state.files.length}`
+    ? `${visible.length} / ${state.files.length} PDF · OK ${completed} z ${state.files.length}`
     : "Není otevřená složka.";
 }
 

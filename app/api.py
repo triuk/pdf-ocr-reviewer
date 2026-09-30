@@ -77,7 +77,7 @@ class BackendApi:
         window.bind("deleteDraftB", self.delete_draft_callback)
         window.bind("listBackupsB", self.list_backups_callback)
         window.bind("restoreBackupB", self.restore_backup_callback)
-        document_bound = {"requestPageB", "setFileStatusB", "setReviewCompleteB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"}
+        document_bound = {"requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"}
         for name, (argc, callback) in bindings.items():
             window.bind(name, self._context_callback(callback, argc, name in document_bound, 1 if name == "requestPageB" else 0))
 
@@ -460,10 +460,19 @@ class BackendApi:
 
     def set_review_complete(self, file_id: str, payload: Any) -> dict[str, Any]:
         with self._lock:
-            if (not isinstance(payload, dict) or set(payload) != {"complete", "expected_sha256"}
-                    or type(payload.get("complete")) is not bool):
+            if (not isinstance(payload, dict) or type(payload.get("complete")) is not bool
+                    or set(payload) not in ({"complete", "expected_sha256"},
+                                           {"complete", "expected_identity"},
+                                           {"complete", "expected_identity", "expected_sha256"})):
                 raise ValueError("Invalid review completion update.")
-            self._check_issue_document(file_id, payload["expected_sha256"])
+            pdf = self._require_file(file_id)
+            if "expected_identity" in payload:
+                stat = pdf.path.stat()
+                actual = FileIdentity(stat.st_size, stat.st_mtime_ns).to_token()
+                if payload["expected_identity"] != pdf.identity.to_token() or actual != payload["expected_identity"]:
+                    raise ValueError("PDF se změnilo. Nejdříve použijte Obnovit.")
+            if "expected_sha256" in payload and payload["expected_sha256"] != file_sha256(pdf.path):
+                raise ValueError("PDF se změnilo. Nejdříve použijte Obnovit.")
             snapshot = copy.deepcopy(self._require_manifest())
             entry = self._entry(file_id)
             entry["review_complete"] = payload["complete"]

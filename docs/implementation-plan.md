@@ -392,6 +392,7 @@ Known limitation: Windows acceptance and long-document performance remain unveri
 
 | Date | Decision | Reason |
 |---|---|---|
+| 2026-09-30 | Move OK checkboxes to each PDF row; X/cross selects the next retained mark | User feedback: mark any file without opening it and continue deleting without repeated J presses |
 | 2026-09-30 | Replace four file classifications with independent inspection completion; Obnovit reloads; backups/export move under Další | Preserve legacy data, distinguish completed inspection from outstanding issues, stay on the current file |
 | 2026-09-29 | Keep red and blue marks for external passes; delete satisfactory results with ×; remove V/C/R approval flow | User wants OCR outside the reviewer, with the manifest as its control file |
 | 2026-09-25 | Schema 2 embeds repair instructions and region issues in the existing manifest | A short range-based prompt can drive targeted external repairs without an export step |

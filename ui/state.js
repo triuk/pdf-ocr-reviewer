@@ -50,7 +50,7 @@ const elements = {};
 
 function bindElements() {
   const ids = [
-    "selectFolderId", "folderPathId", "openPathId", "refreshFolderId", "exportCsvId", "saveStateId", "moreActionsId", "reviewCompleteId",
+    "selectFolderId", "folderPathId", "openPathId", "refreshFolderId", "exportCsvId", "saveStateId", "moreActionsId",
     "ocrModeId", "overlayId", "zoomId", "zoomValueId", "nameFilterId",
     "statusFilterId", "fileIssueFilterId", "fileSummaryId", "fileListId", "documentNameId",
     "documentMetaId", "pageScrollId", "emptyStateId", "pagesId",
@@ -95,7 +95,7 @@ async function callBackend(name, ...args) {
   if (typeof fn !== "function") throw new Error(`Backend function ${name} is unavailable.`);
   const context = captureContext();
   const contextual = !["syncStateB", "saveDraftB", "deleteDraftB", "listBackupsB", "restoreBackupB"].includes(name);
-  const documentBound = ["requestPageB", "setFileStatusB", "setReviewCompleteB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"].includes(name);
+  const documentBound = ["requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"].includes(name);
   if (contextual) args.push(JSON.stringify({context_id: context.contextId, document_id: context.documentId}));
   const result = parseEnvelope(await fn(...args));
   if (contextual && (context.contextId !== state.contextId || (documentBound && !contextMatches(context)))) {
@@ -116,10 +116,12 @@ function contextMatches(context) {
 function enqueueNavigation(work) {
   const job = state.navigationQueue.then(async () => {
     state.navigating = true;
+    document.querySelectorAll(".file-ok input").forEach(input => { input.disabled = true; });
     document.querySelectorAll(".workspace, .issue-sidebar").forEach(node => { node.inert = true; });
     try { return await work(); }
     finally {
       state.navigating = false;
+      document.querySelectorAll(".file-ok input").forEach(input => { input.disabled = state.reviewBusy; });
       document.querySelectorAll(".workspace, .issue-sidebar").forEach(node => { node.inert = false; });
       for (const index of state.visiblePages) requestPage(index);
     }

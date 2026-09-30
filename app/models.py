@@ -25,6 +25,10 @@ class FileIdentity:
     def to_dict(self) -> dict[str, int]:
         return asdict(self)
 
+    def to_token(self) -> str:
+        # Nanosecond timestamps exceed JavaScript integer precision.
+        return f"{self.size}:{self.mtime_ns}"
+
 
 @dataclass(frozen=True, slots=True)
 class ScannedPdf:
@@ -43,6 +47,7 @@ class ScannedPdf:
             "name": self.name,
             "size": self.identity.size,
             "mtime_ns": self.identity.mtime_ns,
+            "identity_token": self.identity.to_token(),
             "status": entry.get("status", "unreviewed"),
             "review_complete": entry.get("review_complete", entry.get("status") == "ok"),
             "last_page": entry.get("last_page", 0),

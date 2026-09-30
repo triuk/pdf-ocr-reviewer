@@ -4,7 +4,7 @@
 
 Each file displays:
 
-- inspection completion (○ unfinished, ✓ completed);
+- an **OK** checkbox for inspection completion;
 - name;
 - page count after metadata is loaded;
 - an indication that the file has changed since the last review;
