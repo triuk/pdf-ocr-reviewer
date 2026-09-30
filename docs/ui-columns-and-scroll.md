@@ -21,7 +21,8 @@ Both columns are part of one shared scrolling container. Each page creates one C
 
 ```text
 page-row
-├── scan-pane
+├── scan-viewport
+│   └── scan-pane (image, OCR overlay and marks)
 └── ocr-pane
 ```
 
@@ -35,3 +36,14 @@ Each row contains:
 - OCR display on the right;
 - identical dimensions for both panes;
 - the aspect ratio of the specific page preserved.
+
+Zoom transforms the scan inside its fixed viewport; the right OCR pane and page
+row keep their size. Ctrl + wheel anchors zoom at the cursor. Middle-button drag
+pans within page boundaries without creating marks. Selecting an issue pans its
+center into view before the shared container scrolls to it. Pan is per page and
+resets when opening a document. Zoom is remembered as a UI preference.
+
+Raster refresh is debounced and requests sufficient resolution for the image zoom
+(up to the existing 2400-pixel width cap). The previous raster stays visible while
+loading, and replacement leaves the annotation/text DOM intact. Zooming out reuses
+the existing higher-resolution raster. Stale render generations remain rejected.

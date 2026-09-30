@@ -11,6 +11,7 @@
   <script src="files.js" defer></script>
   <script src="document.js" defer></script>
   <script src="pages.js" defer></script>
+  <script src="scan-zoom.js" defer></script>
   <script src="issues.js" defer></script>
   <script src="recovery.js" defer></script>
   <script src="workflow.js" defer></script>
@@ -47,11 +48,11 @@
       </span>
     </label>
 
-    <label class="zoom-field">
-      <span>Zoom</span>
-      <input id="zoomId" type="range" min="50" max="200" step="10" value="100">
-      <output id="zoomValueId">100 %</output>
-    </label>
+    <div class="zoom-field">
+      <label for="zoomId">Zoom obrazu</label>
+      <input id="zoomId" type="range" min="25" max="400" step="1" value="100" aria-label="Zoom obrazu">
+      <button id="zoomValueId" type="button" class="secondary" title="Vrátit obraz na 100 % · F">100 %</button>
+    </div>
   </header>
 
   <main class="app-shell">
@@ -107,7 +108,7 @@
         <div id="draftRecoveryListId"></div>
       </details>
       <div class="column-headings" aria-hidden="true">
-        <span>Obraz</span>
+        <span>Obraz <small>Ctrl + kolečko: zoom · prostřední tlačítko: posun</small></span>
         <span>Vrstva OCR</span>
       </div>
 

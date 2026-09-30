@@ -25,6 +25,11 @@ const state = {
   pendingRequests: new Map(),
   generation: 0,
   renderGeneration: 0,
+  scanViews: new Map(),
+  zoomRenderTimer: null,
+  zoomSaveTimer: null,
+  scanPan: null,
+  markingDrag: null,
   applyingState: false,
   observer: null,
   visiblePages: new Set(),
@@ -152,7 +157,7 @@ function applyPublicState(data) {
     elements.ocrModeId.value = state.ui.ocr_mode;
     elements.overlayId.checked = Boolean(state.ui.overlay);
     elements.zoomId.value = state.ui.zoom_percent;
-    elements.zoomValueId.value = `${state.ui.zoom_percent} %`;
+    elements.zoomValueId.textContent = `${state.ui.zoom_percent} %`;
     applyZoom(false);
     elements.nameFilterId.value = state.ui.name_filter || "";
     elements.statusFilterId.value = state.ui.review_filter || "all";

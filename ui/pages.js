@@ -1,11 +1,12 @@
 async function requestPage(pageIndex) {
-  if (state.navigating || !state.document || state.pageData.has(pageIndex)) return;
+  if (state.navigating || !state.document) return;
   const existing = [...state.pendingRequests.values()].find((value) => value.pageIndex === pageIndex);
   if (existing) return;
 
   const row = elements.pagesId.querySelector(`[data-page-index="${pageIndex}"]`);
   const scanPane = row?.querySelector(".scan-pane");
-  const targetWidth = Math.max(300, Math.min(2400, Math.round((scanPane?.clientWidth || 800) * devicePixelRatio)));
+  const targetWidth = Math.max(300, Math.min(2400, Math.round((scanPane?.clientWidth || 800) * Math.max(1, state.ui.zoom_percent / 100) * devicePixelRatio)));
+  if ((state.pageData.get(pageIndex)?.targetWidth || 0) >= targetWidth) return;
   const uniquePart = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
   const requestId = `${state.generation}:${pageIndex}:${uniquePart}`;
   const generation = state.generation;
@@ -39,8 +40,11 @@ function pageReadyF(rawData) {
     const oldUrl = state.objectUrls.get(header.page_index);
     if (oldUrl) URL.revokeObjectURL(oldUrl);
     state.objectUrls.set(header.page_index, objectUrl);
-    state.pageData.set(header.page_index, { header, objectUrl });
-    renderLoadedPage(header.page_index);
+    const wasLoaded = state.pageData.has(header.page_index);
+    state.pageData.set(header.page_index, { header, objectUrl, targetWidth: pending.targetWidth });
+    const displayed = elements.pagesId.querySelector(`[data-page-index="${header.page_index}"] .scan-pane img`);
+    if (wasLoaded && displayed) displayed.src = objectUrl;
+    else renderLoadedPage(header.page_index);
     pruneLoadedPages();
   } catch (error) {
     showToast(error.message, true);
@@ -224,6 +228,7 @@ function placeOcrText(span, item, ocr, sizeBox) {
 }
 
 function unloadPage(pageIndex) {
+  if (state.markingDrag?.pane.closest(`[data-page-index="${pageIndex}"]`)) state.markingDrag.cleanup();
   const url = state.objectUrls.get(pageIndex);
   if (url) URL.revokeObjectURL(url);
   state.objectUrls.delete(pageIndex);
@@ -258,17 +263,6 @@ function pruneLoadedPages() {
   while (state.pageData.size > maximumLoadedPages && candidates.length) {
     unloadPage(candidates.shift());
   }
-}
-
-function applyZoom(reloadVisiblePages = true) {
-  if (!elements.pagesId) return;
-  elements.pagesId.style.width = `${state.ui.zoom_percent}%`;
-  if (!reloadVisiblePages || !state.document) return;
-  state.renderGeneration += 1;
-  state.pendingRequests.clear();
-  const visible = [...state.visiblePages];
-  for (const pageIndex of [...state.pageData.keys()]) unloadPage(pageIndex);
-  for (const pageIndex of visible) requestPage(pageIndex);
 }
 
 function rerenderLoadedOcr() {

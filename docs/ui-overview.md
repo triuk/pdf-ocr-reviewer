@@ -1,7 +1,7 @@
 # User interface
 
 The top toolbar provides folder opening, **Obnovit** for rereading the manifest
-and PDFs, OCR mode, overlay and zoom. **Další** contains **Zálohy** and **Export CSV**.
+and PDFs, OCR mode, overlay and image-only zoom. **Další** contains **Zálohy** and **Export CSV**.
 It closes after selecting an action, clicking outside or pressing Escape.
 
 Each file in the left list has its own **OK** checkbox. This
@@ -15,3 +15,5 @@ The sidebar shows filenames, inspection completion and issue counts, with filter
 for names, completed/unfinished inspections and retained/repaired regions. Scan and
 OCR panes share one scroll container. The issue toolbar provides marking and J/K
 navigation; X deletes the selected region mark and selects the next one. Notes save automatically.
+Ctrl + wheel over the image zooms around the cursor; middle-button drag pans it.
+The right OCR pane keeps its size. F or clicking the percentage restores 100%.

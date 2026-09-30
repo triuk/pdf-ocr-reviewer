@@ -11,6 +11,7 @@ A functional prototype is implemented:
 - side-by-side display of the scan and OCR layer;
 - OCR layout, PDF order, and geometric order modes;
 - OCR overlay;
+- image-only zoom with Ctrl + wheel and middle-button pan;
 - whole-file review completion, problem pages, notes, and last position;
 - atomically written `pdf-ocr-reviewer.manifest.json`;
 - backups and CSV export under **Další**;
@@ -96,6 +97,12 @@ Choose the problem type once; the application remembers it. Marks save immediate
 an optional note saves automatically. **Shift + drag** creates a region over an
 existing mark. **Esc** returns to ordinary text selection. In Layout mode you can
 also mark the spatial OCR pane.
+
+**Ctrl + mouse wheel** over the scan zooms the image around the cursor (25–400%).
+The OCR column and controls keep their size. Drag with the **middle mouse button**
+to pan the magnified image, including in marking mode. **F** or clicking the zoom
+percentage resets to 100%. The slider also controls only the image. Zoom is paused
+while drawing a region; image marks keep their original PDF coordinates.
 
 The sidebar shows counts and a filterable list. **J/K** move between marks and
 **N** focuses the selected mark's note; **X** deletes the selected mark, like its

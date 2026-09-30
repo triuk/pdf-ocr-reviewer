@@ -73,6 +73,7 @@ def run_self_test() -> int:
         "files.js",
         "document.js",
         "pages.js",
+        "scan-zoom.js",
         "issues.js",
         "recovery.js",
         "workflow.js",

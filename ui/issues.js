@@ -160,13 +160,15 @@ async function selectIssue(issueId, scroll = true) {
     const row = elements.pagesId.querySelector(`[data-page-index="${issue.page_index}"]`);
     await requestPage(issue.page_index);
     if (!contextMatches(context)) return;
-    // Center the marked area, not just the page header, at any zoom.
+    focusScanIssue(issue);
+    // Center the marked area in both the zoomed image and the page scroller.
     const pane = row?.querySelector(".scan-pane");
     if (pane) {
       const container = elements.pageScrollId;
       const center = ((issue.bbox[1] + issue.bbox[3]) / 2) / issue.page_height;
-      container.scrollTo({ top: Math.max(0, container.scrollTop + pane.getBoundingClientRect().top
-        - container.getBoundingClientRect().top + center * pane.clientHeight - container.clientHeight / 2), behavior: "smooth" });
+      const rect = pane.getBoundingClientRect();
+      container.scrollTo({ top: Math.max(0, container.scrollTop + rect.top
+        - container.getBoundingClientRect().top + center * rect.height - container.clientHeight / 2), behavior: "smooth" });
     }
   }
 }
@@ -288,11 +290,12 @@ function setMarking(enabled) {
 }
 
 function bindRegionMarking(pane, pageIndex, ocr) {
+  if (state.markingDrag?.pane === pane) state.markingDrag.cleanup();
   pane.markingAbortController?.abort();
   pane.markingAbortController = new AbortController();
   pane.addEventListener("pointerdown", (event) => {
     if (event.target.closest(".issue-box-controls")) return;
-    if (!state.marking || event.button !== 0 || (!event.shiftKey && event.target.closest(".issue-box"))) return;
+    if (state.scanPan || !state.marking || event.button !== 0 || (!event.shiftKey && event.target.closest(".issue-box"))) return;
     event.preventDefault();
     event.stopPropagation();
     const start = { x: event.clientX, y: event.clientY };
@@ -308,11 +311,14 @@ function bindRegionMarking(pane, pageIndex, ocr) {
     const options = { signal: controller.signal };
     const cleanup = () => {
       controller.abort(); preview.remove();
+      state.markingDrag = null;
       if (pane.hasPointerCapture(event.pointerId)) pane.releasePointerCapture(event.pointerId);
     };
+    state.markingDrag = { pane, cleanup };
     const region = (end) => [Math.min(origin[0], end[0]), Math.min(origin[1], end[1]), Math.max(origin[0], end[0]), Math.max(origin[1], end[1])];
     pane.addEventListener("pointermove", (move) => positionIssueRect(preview, region(point(move)), ocr.page_width, ocr.page_height), options);
     pane.addEventListener("pointercancel", cleanup, options);
+    window.addEventListener("blur", cleanup, options);
     pane.addEventListener("lostpointercapture", cleanup, options);
     document.addEventListener("keydown", (key) => { if (key.key === "Escape") cleanup(); }, options);
     pane.addEventListener("pointerup", (up) => {

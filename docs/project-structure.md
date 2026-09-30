@@ -28,6 +28,7 @@ pdf-ocr-reviewer/
 │   ├── files.js
 │   ├── document.js
 │   ├── pages.js
+│   ├── scan-zoom.js
 │   ├── issues.js
 │   ├── workflow.js
 │   └── index.css
@@ -55,6 +56,7 @@ pdf-ocr-reviewer/
 - `manifest.py` – JSON loading, migration, validation, and safe writing;
 - `review.py` – repair instructions, issue validation, hashes and companion file discovery;
 - `ui/issues.js` – marking, issue overlays, autosave, review navigation and status actions;
+- `ui/scan-zoom.js` – cursor-anchored image zoom, pan and debounced raster refresh;
 - `pdf_document.py` – PDF metadata and OCR extraction;
 - `render_worker.py` – render request queue;
 - `raw_packet.py` – packing and unpacking binary messages for the frontend.

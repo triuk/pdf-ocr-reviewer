@@ -87,12 +87,20 @@ def main():
             element = command("/element", {"using": "css selector", "value": selector})
             command(f"/element/{element['element-6066-11e4-a52e-4f735466cecf']}/click")
 
-        def pointer(x, y, end=None):
-            actions = [{"type": "pointerMove", "duration": 0, "x": round(x), "y": round(y)}, {"type": "pointerDown", "button": 0}]
+        def pointer(x, y, end=None, button=0):
+            actions = [{"type": "pointerMove", "duration": 0, "x": round(x), "y": round(y)}, {"type": "pointerDown", "button": button}]
             if end:
                 actions.append({"type": "pointerMove", "duration": 120, "x": round(end[0]), "y": round(end[1])})
-            actions.append({"type": "pointerUp", "button": 0})
+            actions.append({"type": "pointerUp", "button": button})
             command("/actions", {"actions": [{"type": "pointer", "id": "mouse", "parameters": {"pointerType": "mouse"}, "actions": actions}]})
+
+        def zoom_wheel(x, y, delta=-240):
+            command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "\ue009"}]}]})
+            try:
+                command("/actions", {"actions": [{"type": "wheel", "id": "wheel", "actions": [{"type": "scroll", "duration": 100,
+                    "x": round(x), "y": round(y), "deltaX": 0, "deltaY": delta}]}]})
+            finally:
+                command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyUp", "value": "\ue009"}]}]})
 
         try:
             for _ in range(100):
@@ -114,12 +122,22 @@ def main():
             js("elements.issueKindId.value='oversized';elements.issueKindId.dispatchEvent(new Event('change')); ")
             assert js("return elements.issueKindId.selectedOptions[0].textContent;") == "Špatná velikost boxu"
             point = js("const o=state.pageData.get(0).header.ocr; const w=o.layout_items[0]; const p=document.querySelector('.scan-pane').getBoundingClientRect(); return [p.left+(w.x0+w.x1)/2/o.page_width*p.width,p.top+(w.y0+w.y1)/2/o.page_height*p.height];")
+            # Real Ctrl+wheel zooms only the image and keeps its PDF point under the cursor.
+            js("window.zoomLayout=()=>({width:innerWidth,dpr:devicePixelRatio,rects:[...document.querySelectorAll('.toolbar,.sidebar,.ocr-pane')].map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height];})});window.beforeZoom=zoomLayout();")
+            zoom_wheel(*point)
+            wait_for("state.ui.zoom_percent > 100 && state.pageData.get(0).targetWidth > document.querySelector('.scan-pane').clientWidth")
+            assert js("return JSON.stringify(beforeZoom)===JSON.stringify(zoomLayout());"), "Zoom changed controls or OCR layout"
+            after_point = js("const o=state.pageData.get(0).header.ocr; const w=o.layout_items[0]; const p=document.querySelector('.scan-pane').getBoundingClientRect();return [p.left+(w.x0+w.x1)/2/o.page_width*p.width,p.top+(w.y0+w.y1)/2/o.page_height*p.height];")
+            assert max(abs(a-b) for a,b in zip(point, after_point)) < 1
             pointer(*point)
             wait_for("state.document?.issues.length === 1")
             assert js("return state.document.issues[0].kind;") == "oversized"
+            assert js("const o=state.pageData.get(0).header.ocr,w=o.layout_items[0],b=state.document.issues[0].bbox;return [w.x0,w.y0,w.x1,w.y1].every((v,i)=>Math.abs(v-b[i])<0.02);")
             first_id = js("return state.selectedIssueId;")
             js("elements.issueNoteId.value='Text je správně; zmenšit box.'; elements.issueNoteId.dispatchEvent(new Event('input',{bubbles:true}));")
             wait_for("state.issueDrafts.size === 0 && state.document.issues[0].note.includes('zmenšit')")
+            click("#zoomValueId")
+            wait_for("state.ui.zoom_percent === 100")
             # Drag a blank region: this also supports missing OCR with no selectable word.
             rect = js("const r=document.querySelector('.scan-pane').getBoundingClientRect();return [r.left+15,r.top+20,r.left+85,r.top+45];")
             pointer(rect[0], rect[1], rect[2:])
@@ -129,12 +147,39 @@ def main():
             # Changing render settings must not accumulate pointer handlers.
             js("elements.overlayId.click();elements.overlayId.click();")
             time.sleep(0.3)
-            js("elements.zoomId.value='120';elements.zoomId.dispatchEvent(new Event('change')); ")
+            js("elements.zoomId.value='200';elements.zoomId.dispatchEvent(new Event('change')); ")
             wait_for("state.pageData.has(0)")
-            rect = js("const r=document.querySelector('.scan-pane').getBoundingClientRect();return [r.left+160,r.top+15,r.left+220,r.top+30];")
+            # Middle-button pan works in marking mode without adding an annotation.
+            pan = js("const r=document.querySelector('.scan-viewport').getBoundingClientRect();return [r.left+30,r.top+30,r.left+r.width-15,Math.min(r.top+r.height-15,elements.pageScrollId.getBoundingClientRect().bottom-15)];")
+            pointer(pan[0], pan[1], pan[2:], button=1)
+            assert js("return state.document.issues.length === 2 && !state.scanPan && scanView(0).x === 0 && scanView(0).y > -0.5;")
+            # Move the remaining vertical distance to reach the top margin if necessary.
+            pointer(pan[0], pan[1], pan[2:], button=1)
+            assert js("return scanView(0).y === 0;")
+            rect = js("const r=document.querySelector('.scan-pane').getBoundingClientRect();return [r.left+250,r.top+15,r.left+310,r.top+30];")
+            expected_bbox = js(f"const r=document.querySelector('.scan-pane').getBoundingClientRect(),o=state.pageData.get(0).header.ocr;return [{rect[0]}-r.left,{rect[1]}-r.top,{rect[2]}-r.left,{rect[3]}-r.top].map((v,i)=>v*(i%2?o.page_height/r.height:o.page_width/r.width));")
+            # Dispatch a wheel during a real pointer drag, without splitting the
+            # pressed mouse gesture across WebDriver action sequences.
+            js("""window.dragZoomGuard=null;
+                const guard=e=>{if(e.buttons!==1)return;
+                  window.removeEventListener('pointermove',guard,true);
+                  const blocked=!e.target.dispatchEvent(new WheelEvent('wheel',{
+                    ctrlKey:true,buttons:1,deltaY:-240,clientX:e.clientX,clientY:e.clientY,bubbles:true,cancelable:true}));
+                  window.dragZoomGuard={blocked,drag:Boolean(state.markingDrag),zoom:state.ui.zoom_percent};
+                };window.addEventListener('pointermove',guard,true);""")
             pointer(rect[0], rect[1], rect[2:])
+            assert js("return dragZoomGuard;") == {"blocked": True, "drag": True, "zoom": 200}
             wait_for("state.document?.issues.length === 3")
+            actual_bbox = js("return selectedIssue().bbox;")
+            assert max(abs(a-b) for a,b in zip(expected_bbox, actual_bbox)) < 1, (expected_bbox, actual_bbox)
             third_id = js("return state.selectedIssueId;")
+            js(f"selectIssue({json.dumps(first_id)});")
+            wait_for("state.selectedIssueId === " + json.dumps(first_id))
+            wait_for("(()=>{const b=document.querySelector('.scan-pane .issue-box.selected').getBoundingClientRect(),v=document.querySelector('.scan-viewport').getBoundingClientRect(),s=elements.pageScrollId.getBoundingClientRect(),x=(b.left+b.right)/2,y=(b.top+b.bottom)/2;return x>=v.left&&x<=v.right&&y>=Math.max(v.top,s.top)&&y<=Math.min(v.bottom,s.bottom);})()")
+            args.screenshot.with_name(args.screenshot.stem + '-zoom.png').write_bytes(base64.b64decode(request('GET', f'/session/{session}/screenshot')))
+            js("document.activeElement.blur();")
+            command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [{"type": "keyDown", "value": "f"}, {"type": "keyUp", "value": "f"}]}]})
+            wait_for("state.ui.zoom_percent === 100 && scanView(0).x === 0 && scanView(0).y === 0")
             # The on-box cross selects the next retained issue in geometric order.
             js(f"selectIssue({json.dumps(second_id)}, false);")
             wait_for("state.selectedIssueId === " + json.dumps(second_id))
@@ -292,7 +337,7 @@ def main():
             errors = command("/log", {"type": "browser"})
             severe = [e for e in errors if e["level"] == "SEVERE"]
             assert not severe, severe
-            print(f"PASS: real WebUI transport, click/drag, autosave, external edit protection, reload, delete/restore, retained blue marks across external passes, durable draft recovery, backup selection and multi-PDF filters. Screenshot: {args.screenshot}", flush=True)
+            print(f"PASS: real WebUI transport, image-only Ctrl+wheel zoom, pan and marking coordinates, click/drag, autosave, external edit protection, reload, delete/restore, retained blue marks across external passes, durable draft recovery, backup selection and multi-PDF filters. Screenshot: {args.screenshot}", flush=True)
         finally:
             if session:
                 request("DELETE", f"/session/{session}")

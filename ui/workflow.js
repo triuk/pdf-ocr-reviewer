@@ -110,6 +110,10 @@ async function saveUiOptions(patch) {
 }
 
 function releasePageResources() {
+  state.markingDrag?.cleanup();
+  state.scanPan?.cleanup();
+  window.clearTimeout(state.zoomRenderTimer);
+  state.scanViews.clear();
   if (state.observer) state.observer.disconnect();
   window.clearTimeout(state.savePositionTimer);
   for (const url of state.objectUrls.values()) URL.revokeObjectURL(url);
@@ -184,6 +188,9 @@ function handleKeyboard(event) {
   }
   if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
   if (handleIssueKeyboard(event)) return;
+  if (event.key.toLowerCase() === "f" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    event.preventDefault(); setScanZoom(100); return;
+  }
   if (event.key === "ArrowDown") { event.preventDefault(); moveDocument(1); }
   else if (event.key === "ArrowUp") { event.preventDefault(); moveDocument(-1); }
   else if (event.key === "PageDown") { event.preventDefault(); movePage(1); }
@@ -213,12 +220,9 @@ function attachEvents() {
     saveUiOptions({ overlay: elements.overlayId.checked });
     rerenderLoadedOcr();
   });
-  elements.zoomId.addEventListener("input", () => { elements.zoomValueId.value = `${elements.zoomId.value} %`; });
-  elements.zoomId.addEventListener("change", () => {
-    const zoomPercent = Number(elements.zoomId.value);
-    saveUiOptions({ zoom_percent: zoomPercent });
-    applyZoom(true);
-  });
+  elements.zoomId.addEventListener("input", () => setScanZoom(Number(elements.zoomId.value)));
+  elements.zoomId.addEventListener("change", () => setScanZoom(Number(elements.zoomId.value)));
+  elements.zoomValueId.addEventListener("click", () => setScanZoom(100));
   elements.nameFilterId.addEventListener("input", () => {
     renderFileList();
     saveUiOptions({ name_filter: elements.nameFilterId.value });

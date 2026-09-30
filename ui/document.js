@@ -81,10 +81,16 @@ function renderDocumentShell() {
     label.append(pageText, problemButton);
 
     const scanPane = createPagePane("scan-pane", page);
+    const viewport = document.createElement("div");
+    viewport.className = "scan-viewport";
+    viewport.style.aspectRatio = `${page.width} / ${page.height}`;
+    viewport.append(scanPane);
+    bindScanViewport(viewport, page.page_index);
     const ocrPane = createPagePane("ocr-pane", page);
-    row.append(label, scanPane, ocrPane);
+    row.append(label, viewport, ocrPane);
     elements.pagesId.append(row);
   }
+  applyZoom(false);
   setupObserver();
 }
 

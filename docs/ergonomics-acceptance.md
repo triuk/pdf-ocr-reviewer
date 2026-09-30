@@ -40,7 +40,11 @@ ovládání; nejsou dokladem provedené opravy OCR. Původní PDF se nemění.
 5. **Dokončená prohlídka:** zaškrtněte „OK“ u názvu souboru vlevo. Vyzkoušejte
    i jiný než otevřený soubor: pravá část se nepřepne, připomínky zůstávají. Zrušte zaškrtnutí a zkuste filtr dokončení vlevo.
    V nabídce „Další“ najdete Zálohy a Export CSV; zavře se i přes Esc či klik ven.
-6. **Návrat k práci:** zavřete aplikaci, spusťte ji znovu a zkontrolujte
+6. **Zoom obrazu:** Ctrl + kolečko nad obrazem přibližuje kolem kurzoru.
+   Pravé OCR a ovládání zůstávají stejné. Přiblížený obraz posouvejte tažením
+   prostředním tlačítkem i při označování. Klik na procenta nebo F vrací 100 %.
+   Zkuste označit slovo i oblast po přiblížení a posunu, pak přejít přes J/K.
+7. **Návrat k práci:** zavřete aplikaci, spusťte ji znovu a zkontrolujte
    ponechaná místa, poznámky a Archiv.
 
 Stačí zpětná vazba, kde bylo nutné hledat ovládání, zbytečně klikat nebo
@@ -57,9 +61,12 @@ python tools/create_ergonomics_demo.py /nova/testovaci/slozka --source /cesta/ke
 Bez `--source` vzniknou syntetické PDF. Pro běh ze zdrojů použijte
 `python main.py --folder /nova/testovaci/slozka`.
 
-Lokálně na Linuxu prošlo 74 Python testů a 13 JS scénářů. Skutečný WebUI/Chromium
+Lokálně na Linuxu prošlo 74 Python testů a 16 JS scénářů. Skutečný WebUI/Chromium
 průchod ověřil označení, autosave, smazání/obnovu, ponechané modré označení při
 druhém externím průchodu, filtry přes dvě PDF, konflikt, restart, obnovu poznámky
-a výběr zálohy. Zdrojový i zabalený self-test prošly před předáním binárky.
+a výběr zálohy. Zoom se ověřuje přes skutečné Ctrl + kolečko: stálá velikost
+OCR a ovládání, bod pod kurzorem, posun prostředním tlačítkem, souřadnice označení
+po zoomu/posunu a návrat na 100 %. Blokování zoomu během reálného tažení ověřuje
+vložená DOM wheel událost. Zdrojový i zabalený self-test prošly před předáním binárky.
 Windows běh a úplné CI dosud nebyly v této práci provedeny. Výkon a veřejné
 vydání patří do dalších etap po uživatelské zkoušce.

@@ -14,14 +14,16 @@ test('navigation combines name and completion filters, including a current file 
 });
 
 test('zoom supersedes in-flight requests and ignores their packets',async()=>{
-  const c=app(['state.js','pages.js']);let width=400;const requests=[];
+  const c=app(['state.js','pages.js','scan-zoom.js']);const requests=[];
   c.crypto={randomUUID:()=>String(requests.length)};c.devicePixelRatio=1;
   c.TextDecoder=TextDecoder;c.Blob=Blob;
   c.URL.createObjectURL=()=> 'blob:new';
-  c.elements.pagesId={style:{},querySelector:()=>({querySelector:()=>({get clientWidth(){return width;}})})};
+  c.elements.pagesId={querySelector:()=>({querySelector:()=>({clientWidth:400})})};
+  c.elements.zoomId={};c.elements.zoomValueId={};
   c.state.visiblePages.add(0);c.callBackend=async(...args)=>{requests.push(args);};
   c.renderLoadedPage=()=>{};c.pruneLoadedPages=()=>{};
-  await c.requestPage(0);width=800;c.state.ui.zoom_percent=200;c.applyZoom();
+  await c.requestPage(0);c.state.ui.zoom_percent=200;c.applyZoom();
+  await new Promise(resolve=>setTimeout(resolve,200));
   assert.deepEqual(requests.map(a=>a[4]),[400,800]);
   function packet(request){
     const bytes=new TextEncoder().encode(JSON.stringify({request_id:request[1],file_id:'a.pdf',page_index:0,mime:'image/png'}));

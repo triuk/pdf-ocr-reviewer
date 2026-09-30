@@ -26,7 +26,9 @@ The **Overlay** switch displays semi-transparent OCR objects or their rectangles
 | `↑` / `↓` | previous or next PDF |
 | `Page Up` / `Page Down` | previous or next page |
 | `Space` | turn overlay on or off |
-| `F` | fit to width |
+| `F` | reset the image to 100% (fit its left viewport) |
+| `Ctrl` + mouse wheel over image | zoom only the image, anchored at the cursor |
+| middle-button drag over image | pan the magnified image, including in marking mode |
 | `Ctrl+G` | go to a specified page |
 | `N` | open or focus the note |
 | `X` | delete the selected mark and select the next in the filter, like × on its box; recoverable from Archiv |
@@ -38,6 +40,10 @@ When an issue is selected, `N` focuses its note; otherwise it focuses the file n
 Shortcuts do not intercept typing in inputs. Shift + drag marks an area over an
 existing issue. Marking also works in the right-hand Layout pane. Issue colors and
 labels are independent of the ordinary OCR overlay switch.
+
+The zoom slider changes only the image (25–400%); clicking its percentage resets
+to 100%. Right-hand OCR and controls stay the same size. While drawing a box, zoom
+is paused so its PDF coordinates stay stable. Ordinary wheel scrolling is unchanged.
 
 Use the **OK** checkbox beside each filename in the left list to record a completed whole-file inspection.
 It does not open or switch PDF files. The former 0–3 classification shortcuts are removed.
