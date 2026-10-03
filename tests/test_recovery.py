@@ -21,7 +21,7 @@ def test_backups_are_bounded_valid_and_conflict_checked(tmp_path):
     restore_backup(tmp_path, chosen, expected_revision=revision)
     assert load_manifest(tmp_path)['counter'] == 13
     prior = tmp_path / '.pdf-ocr-reviewer-backups' / 'before-restore.json'
-    assert json.loads(prior.read_text())['counter'] == 14
+    assert json.loads(prior.read_text(encoding="utf-8"))['counter'] == 14
 
 
 def test_corrupt_manifest_restore_preserves_bad_bytes_and_valid_backup(tmp_path):

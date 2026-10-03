@@ -72,9 +72,9 @@ def test_v1_migration_preserves_all_review_data_and_unknown_fields(tmp_path: Pat
     assert migrated["files"]["a.pdf"] == {**original["files"]["a.pdf"], "issues": []}
     assert migrated["ui"] == original["ui"]
     assert migrated["future"] == original["future"]
-    assert json.loads(path.read_text())["schema_version"] == 1  # read-only until save
+    assert json.loads(path.read_text(encoding="utf-8"))["schema_version"] == 1  # read-only until save
     save_manifest(tmp_path, migrated, expected_revision=manifest_revision(tmp_path))
-    assert next(iter(json.loads(path.read_text()))) == "repair_instructions"
+    assert next(iter(json.loads(path.read_text(encoding="utf-8")))) == "repair_instructions"
     assert load_manifest(tmp_path) == migrated
 
 
@@ -84,7 +84,7 @@ def test_old_repair_contract_migrates_without_requeueing_accepted_issues(tmp_pat
     from app.manifest import migrate_manifest
     from app.review import repair_instructions
     data = default_manifest()
-    legacy = json.loads((Path(__file__).parent / 'fixtures/repair-instructions-v2.json').read_text())
+    legacy = json.loads((Path(__file__).parent / 'fixtures/repair-instructions-v2.json').read_text(encoding="utf-8"))
     legacy['version'] = version
     if version == 1:
         legacy.pop('writer_protocol')

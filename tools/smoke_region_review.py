@@ -267,7 +267,7 @@ def main():
             # All typed data survives refresh and version-3 instructions are first.
             click("#refreshFolderId")
             wait_for("!state.navigating && state.pageData.has(0) && state.document?.issue_counts.fixed === 1")
-            assert next(iter(json.loads((folder / MANIFEST_FILENAME).read_text()))) == "repair_instructions"
+            assert next(iter(json.loads((folder / MANIFEST_FILENAME).read_text(encoding="utf-8")))) == "repair_instructions"
             assert js("return state.document.issues.find(i => i.id === " + json.dumps(first_id) + ").note;") == "Text je správně; zmenšit box."
             wait_for("!state.navigating && state.journalPending === 0")
             # Durable draft survives a browser restart and a conflicting external note.
