@@ -147,6 +147,7 @@ function releasePageResources() {
   state.objectUrls.clear();
   state.pageData.clear();
   state.pendingRequests.clear();
+  state.renderQueue.clear();
   state.visiblePages.clear();
 }
 

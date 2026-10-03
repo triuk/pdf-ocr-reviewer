@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,11 @@ import pymupdf
 
 from .models import PageMetadata
 from .review import COORDINATE_SYSTEM, validate_bbox
+
+
+# Bound native pixmap allocations even for extreme page aspect ratios.
+MAX_RENDER_PIXELS = 8_000_000
+MAX_RENDER_SIDE = 16_384
 
 
 class PdfDocumentError(RuntimeError):
@@ -75,7 +81,13 @@ class PdfDocument:
         try:
             page = self._document.load_page(page_index)
             rect = page.rect
-            scale = target_width / rect.width
+            scale = min(target_width / rect.width,
+                        math.sqrt(MAX_RENDER_PIXELS / (rect.width * rect.height)),
+                        MAX_RENDER_SIDE / max(rect.width, rect.height))
+            # Round inward before PyMuPDF rounds its raster bounds outward.
+            width = max(1, math.floor(rect.width * scale))
+            height = max(1, math.floor(rect.height * scale))
+            scale = min(width / rect.width, height / rect.height)
             pixmap = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False)
             image_bytes = pixmap.tobytes("png")
             layout_items = self._layout_items(page)

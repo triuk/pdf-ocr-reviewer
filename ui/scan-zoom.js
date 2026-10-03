@@ -39,6 +39,7 @@ function applyZoom(reloadVisiblePages = true, anchor = null) {
   // Reject old raster replies immediately, but keep the displayed image and OCR DOM.
   state.renderGeneration += 1;
   state.pendingRequests.clear();
+  state.renderQueue.clear();
   window.clearTimeout(state.zoomRenderTimer);
   const context = captureContext();
   state.zoomRenderTimer = window.setTimeout(() => {

@@ -7,6 +7,11 @@ async function requestPage(pageIndex) {
   const scanPane = row?.querySelector(".scan-pane");
   const targetWidth = Math.max(300, Math.min(2400, Math.round((scanPane?.clientWidth || 800) * Math.max(1, state.ui.zoom_percent / 100) * devicePixelRatio)));
   if ((state.pageData.get(pageIndex)?.targetWidth || 0) >= targetWidth) return;
+  if (state.rendering) {
+    state.renderQueue.set(pageIndex, captureContext());
+    return;
+  }
+  state.rendering = true;
   const uniquePart = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
   const requestId = `${state.generation}:${pageIndex}:${uniquePart}`;
   const generation = state.generation;
@@ -17,6 +22,21 @@ async function requestPage(pageIndex) {
   } catch (error) {
     state.pendingRequests.delete(requestId);
     if (generation === state.generation && renderGeneration === state.renderGeneration) showToast(error.message, true);
+  } finally {
+    state.rendering = false;
+    pumpPageQueue();
+  }
+}
+
+function pumpPageQueue() {
+  if (state.rendering || state.navigating) return;
+  const selectedPage = state.document?.issues?.find(issue => issue.id === state.selectedIssueId)?.page_index;
+  for (const [pageIndex, context] of state.renderQueue) {
+    state.renderQueue.delete(pageIndex);
+    if (!contextMatches(context) || (!state.visiblePages.has(pageIndex) && pageIndex !== selectedPage)) continue;
+    // Width is calculated only when dispatching, using the latest zoom.
+    requestPage(pageIndex);
+    if (state.rendering) break;
   }
 }
 

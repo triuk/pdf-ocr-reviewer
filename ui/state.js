@@ -23,6 +23,8 @@ const state = {
   pageData: new Map(),
   objectUrls: new Map(),
   pendingRequests: new Map(),
+  renderQueue: new Map(),
+  rendering: false,
   generation: 0,
   renderGeneration: 0,
   scanViews: new Map(),

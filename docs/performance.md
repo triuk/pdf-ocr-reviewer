@@ -49,3 +49,22 @@ jsou v [původním měření](measurements/review-before.json) a
 [měření po úpravě](measurements/review-after.json). Časy závisí na stroji,
 úložišti a obsahu PDF; nejsou limitem v CI. CI ověřuje počty zápisů, integritu,
 pořadí odpovědí a omezení renderování deterministickými testy.
+
+## Fronta renderování a velikost rastru
+
+Původní frontend při nárazovém požadavku na osm stran odeslal všech osm ještě
+před dokončením první. Backend je zpracovává pod jedním zámkem, takže se tím
+nevytvořil paralelní výkon. Nyní je odeslaný nejvýše jeden render; čekající
+požadavky se sloučí podle stránky a rozlišení se určí až při odeslání. Pokud se
+uživatel mezitím přesune k poslední straně, reprodukce provede dva rendery místo
+osmi. Změna PDF zahodí starou frontu, změna zoomu ponechá pouze poslední rozlišení.
+Rozpracovaný nativní render se násilně nepřerušuje.
+
+Jednotlivý rastr je omezen na 8 milionů pixelů a 16 384 pixelů na delší straně.
+Pro stránku 100 × 10 000 bodů by samotný požadavek šířky 4 000 px znamenal
+1,6 miliardy pixelů (4,8 GB surových RGB dat); limit ho zmenší před alokací.
+OCR souřadnice i text zůstávají v rozměrech stránky. Testy kontrolují extrémní
+poměry stran a běžnou stránku při maximálním zoomu. PNG komprese, dekódované
+obrázky v prohlížeči a paměť PyMuPDF mají další režii; limit není slibem celkové
+spotřeby RAM aplikace. Threadový renderer, cache PDF hashů a přepis DOM seznamů
+se nezavádějí bez dalšího doloženého přínosu.
