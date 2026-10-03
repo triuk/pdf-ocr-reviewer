@@ -6,6 +6,7 @@ on:
       - main
     tags:
       - "v*"
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -41,6 +42,31 @@ jobs:
         run: node --test tests/js/*.test.cjs
       - name: Run source self-test
         run: python main.py --self-test
+      - name: Install matching Chrome and ChromeDriver
+        if: runner.os == 'Linux'
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+          install-chromedriver: true
+      - name: Run real WebUI browser checks
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        env:
+          CHROME_BINARY: ${{ steps.chrome.outputs.chrome-path }}
+          CHROMEDRIVER_BINARY: ${{ steps.chrome.outputs.chromedriver-path }}
+        run: |
+          mkdir -p smoke-artifacts
+          python tools/smoke_region_review.py --screenshot smoke-artifacts/ordinary.png
+          python tools/smoke_region_review.py --rotated --screenshot smoke-artifacts/rotated.png
+      - name: Upload browser screenshots
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v6
+        with:
+          name: browser-smoke-screenshots
+          path: smoke-artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
 
   build:
     needs: test

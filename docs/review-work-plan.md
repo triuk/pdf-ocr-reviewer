@@ -2,7 +2,8 @@
 
 Datum: 2026-09-29. Výchozí revize: `02afcfb` (`v0.1.4`).
 Stav: etapy 1–5 implementovány; uživatel ergonomii schválil 2026-10-03.
-Probíhá měřením podložená etapa 6 a následná automatizace ověření v etapě 7.
+Etapa 6 je dokončena, měření a rozhodnutí jsou v [performance.md](performance.md).
+V etapě 7 zbývá vzdálené CI, Windows a vydání.
 Windows ověření zámků zůstává otevřené; připraveny jsou CI testy pro obě platformy.
 
 Plán pokrývá sedm nálezů z celkového code review a navržená vylepšení
@@ -130,18 +131,23 @@ Uživatelská zkouška je schválená, etapa 6 může pokračovat.
 
 Priorita: po dokončení správnosti. Optimalizace podložit měřením.
 
-- [ ] Změřit latenci uložení, počty zápisů, dobu hashování a odezvu při
+- [x] Změřit latenci uložení, počty zápisů, dobu hashování a odezvu při
       renderování na velkém PDF i manifestu s mnoha připomínkami a historií.
-- [ ] Sloučit zbytečně časté zápisy nastavení a autosave při zachování
+- [x] Sloučit zbytečně časté zápisy nastavení a autosave při zachování
       spolehlivého dokončení před přechodem mezi kontexty.
-- [ ] Omezit kopírování celého manifestu, vracení všech připomínek a
+- [x] Omezit kopírování celého manifestu, vracení všech připomínek a
       překreslování seznamů tam, kde měření prokáže dopad.
-- [ ] Navrhnout opětovné použití ověřeného hashe pouze s jasnými pravidly
+- [x] Navrhnout opětovné použití ověřeného hashe pouze s jasnými pravidly
       zneplatnění. Nezaměnit pouhou shodu velikosti a času souboru za záruku
       shodného obsahu; zachovat kontrolu verze před uložením připomínky.
-- [ ] Omezit frontu nepotřebných renderů a velikost výsledného rastru podle
+- [x] Omezit frontu nepotřebných renderů a velikost výsledného rastru podle
       počtu pixelů. Změnu renderovací architektury provést jen při doložené potřebě.
-- [ ] Zapsat srovnání před/po na stejných datech a ověřit regresní scénáře.
+- [x] Zapsat srovnání před/po na stejných datech a ověřit regresní scénáře.
+
+Výsledky: poznámka 452 → 147 ms, odpověď 3,5 MB → 4,2 kB; beze změny
+se nezapisuje manifest. SHA-256 zůstává plný při každé mutaci. Fronta má jeden
+aktivní render, obrázek nejvýše 8 MP. Přepis DOM a hash cache nemají doložený
+bezpečný přínos a nezavádějí se. Viz podrobné měření.
 
 Hotovo, když měření doloží přínos změn a zůstanou splněny podmínky integrity
 dat, detekce změněného PDF a omezené spotřeby paměti.
@@ -153,13 +159,13 @@ ověří celý výsledek.
 
 - [ ] Zařadit Python a JS regresní testy do CI; souborové zámky testovat
       na Linuxu i Windows.
-- [ ] Zařadit prohlížečový smoke test přes skutečné WebUI na Linuxu.
+- [x] Zařadit prohlížečový smoke test přes skutečné WebUI na Linuxu.
       Používat malé syntetické PDF, včetně otočené/oříznuté stránky;
       uživatelovo PDF nesmí být nutnou součástí CI.
-- [ ] Zachovat self-test zdrojové aplikace a obou zabalených binárek.
-- [ ] Ověřit integračně externí opravu, načtení výsledků, smazání,
+- [x] Zachovat self-test zdrojové aplikace a obou zabalených binárek.
+- [x] Ověřit integračně externí opravu, načtení výsledků, smazání,
       obnovení připomínky a obnovu po konfliktu či restartu.
-- [ ] Aktualizovat popis manifestu, API, klávesových zkratek, záloh a externího
+- [x] Aktualizovat popis manifestu, API, klávesových zkratek, záloh a externího
       zápisového postupu; uvést skutečně ověřené platformy a známé limity.
 - [ ] Připravit release poznámky a vydání až po splnění přejímacích podmínek.
 
@@ -173,8 +179,8 @@ za hotovou funkci bez ověření.
 Etapy 1–3 tvoří první celek oprav potvrzených chyb. Etapy 4–6 přidávají
 odsouhlasená vylepšení. Etapa 7 je společná podmínka vydání.
 
-Nejbližší konkrétní krok: změřit zápisy, odpovědi a renderování, zavést doložené
-optimalizace a doplnit automatické ověření podle etap 6–7.
+Nejbližší konkrétní krok: spustit CI pro Linux/Windows, ověřit obě binárky
+a po splnění kontrol dokončit vydání podle etapy 7.
 Změny jsou rozděleny do samostatných commitů.
 
 Výchozí ověření z code review 2026-09-28: 42 úspěšných Python testů,

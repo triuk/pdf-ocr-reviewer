@@ -33,8 +33,13 @@ from app.review import file_sha256
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pdf", type=Path)
+    parser.add_argument("--rotated", action="store_true", help="Use a cropped synthetic page rotated by 90 degrees.")
+    parser.add_argument("--chrome", default=os.environ.get("CHROME_BINARY"))
+    parser.add_argument("--chromedriver", default=os.environ.get("CHROMEDRIVER_BINARY", "chromedriver"))
     parser.add_argument("--screenshot", type=Path, default=Path("/tmp/pdf-ocr-reviewer-smoke.png"))
     args = parser.parse_args()
+    if args.pdf and args.rotated:
+        parser.error("--rotated uses the synthetic fixture; do not combine it with --pdf")
     with tempfile.TemporaryDirectory(prefix="ocr-region-smoke-") as work:
         folder = Path(work)
         pdf = folder / "sample-ocr.pdf"
@@ -44,7 +49,10 @@ def main():
             with pymupdf.open() as doc:
                 page = doc.new_page(width=600, height=850)
                 for index in range(30):
-                    page.insert_text((50, 80 + index * 20), f"OCR review sample line {index + 1}", fontsize=12)
+                    page.insert_text((100 if args.rotated else 50, 80 + index * 20), f"OCR review sample line {index + 1}", fontsize=12)
+                if args.rotated:
+                    page.set_cropbox(pymupdf.Rect(20, 30, 580, 820))
+                    page.set_rotation(90)
                 doc.save(pdf)
         os.environ["PDF_OCR_REVIEWER_STATE_DIR"] = str(folder / "local-state")
         api = BackendApi(folder)
@@ -57,7 +65,7 @@ def main():
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
-        driver = subprocess.Popen(["chromedriver", f"--port={port}", "--allowed-ips=127.0.0.1"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        driver = subprocess.Popen([args.chromedriver, f"--port={port}", "--allowed-ips=127.0.0.1"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         session = None
 
         def request(method, route, data=None):
@@ -110,7 +118,7 @@ def main():
                 except OSError:
                     time.sleep(0.05)
             created = request("POST", "/session", {"capabilities": {"alwaysMatch": {
-                "browserName": "chrome", "goog:chromeOptions": {"args": ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--window-size=1480,1000", f"--user-data-dir={folder / 'browser'}"]},
+                "browserName": "chrome", "goog:chromeOptions": {**({"binary": args.chrome} if args.chrome else {}), "args": ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--window-size=1480,1000", f"--user-data-dir={folder / 'browser'}"]},
                 "goog:loggingPrefs": {"browser": "ALL"},
             }}})
             session = created["sessionId"]

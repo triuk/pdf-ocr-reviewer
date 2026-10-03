@@ -62,12 +62,13 @@ python tools/create_ergonomics_demo.py /nova/testovaci/slozka --source /cesta/ke
 Bez `--source` vzniknou syntetické PDF. Pro běh ze zdrojů použijte
 `python main.py --folder /nova/testovaci/slozka`.
 
-Lokálně na Linuxu prošlo 74 Python testů a 16 JS scénářů. Skutečný WebUI/Chromium
+Lokálně na Linuxu prošlo 83 Python testů a 23 JS scénářů. Skutečný WebUI/Chromium
 průchod ověřil označení, autosave, smazání/obnovu, ponechané modré označení při
 druhém externím průchodu, filtry přes dvě PDF, konflikt, restart, obnovu poznámky
 a výběr zálohy. Zoom se ověřuje přes skutečné Ctrl + kolečko: stálá velikost
 OCR a ovládání, bod pod kurzorem, posun prostředním tlačítkem, souřadnice označení
 po zoomu/posunu a návrat na 100 %. Blokování zoomu během reálného tažení ověřuje
 vložená DOM wheel událost. Zdrojový i zabalený self-test prošly před předáním binárky.
-Windows běh a úplné CI dosud nebyly v této práci provedeny. Výkon a veřejné
-vydání patří do dalších etap po uživatelské zkoušce.
+Windows běh a úplné CI zatím čekají na vzdálené ověření. Výkonová etapa je
+dokončená; měření popisuje `performance.md`. Běžný i otočený/oříznutý scénář
+je zařazen do CI na Linuxu.

@@ -7,7 +7,8 @@ section 17.
 
 The next work is defined in the [post-review work plan](review-work-plan.md)
 (2026-09-29): integrity fixes, reliable navigation, recovery, ergonomics and
-measured performance improvements. Stages 1–5 are being implemented up to ergonomics acceptance.
+measured performance improvements. Stages 1–5 passed ergonomics acceptance on 2026-10-03. Stage 6 is complete;
+see [measured performance](performance.md). Stage 7 is awaiting remote CI and release.
 
 ## 8. Loading, virtualization, and memory
 
@@ -392,6 +393,7 @@ Known limitation: Windows acceptance and long-document performance remain unveri
 
 | Date | Decision | Reason |
 |---|---|---|
+| 2026-10-03 | Complete measured autosave/render optimizations and add real-browser CI with cropped/rotated pages | User accepted ergonomics; retain full hash verification, recovery and writer locks |
 | 2026-09-30 | Zoom only the scan with Ctrl + wheel, pan with the middle button, reset with F/percentage; remove redundant document heading | Keep OCR and controls fixed, preserve PDF marking coordinates and focus selected marks in the magnified image |
 | 2026-09-30 | Move OK checkboxes to each PDF row; X/cross selects the next retained mark | User feedback: mark any file without opening it and continue deleting without repeated J presses |
 | 2026-09-30 | Replace four file classifications with independent inspection completion; Obnovit reloads; backups/export move under Další | Preserve legacy data, distinguish completed inspection from outstanding issues, stay on the current file |
