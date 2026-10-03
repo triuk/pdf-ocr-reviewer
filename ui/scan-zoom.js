@@ -53,11 +53,7 @@ function setScanZoom(percent, anchor = null) {
   if (!Number.isFinite(percent) || percent === state.ui.zoom_percent) return;
   state.ui.zoom_percent = percent;
   applyZoom(true, anchor);
-  window.clearTimeout(state.zoomSaveTimer);
-  const folderContext = state.contextId;
-  state.zoomSaveTimer = window.setTimeout(() => {
-    if (folderContext === state.contextId) saveUiOptions({ zoom_percent: percent });
-  }, 220);
+  saveUiOptions({ zoom_percent: percent });
 }
 
 function focusScanIssue(issue) {

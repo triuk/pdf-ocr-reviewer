@@ -103,10 +103,37 @@ function flushFileNote() {
   return job;
 }
 
-async function saveUiOptions(patch) {
+function saveUiOptions(patch) {
   state.ui = { ...state.ui, ...patch };
-  try { await callBackend("setUiOptionsB", JSON.stringify(patch)); }
-  catch (error) { showToast(error.message, true); }
+  const prior = state.uiSavePending;
+  state.uiSavePending = { contextId: state.contextId,
+    patch: { ...(prior?.contextId === state.contextId ? prior.patch : {}), ...patch } };
+  window.clearTimeout(state.uiSaveTimer);
+  state.uiSaveTimer = window.setTimeout(flushUiOptions, 220);
+}
+
+function flushUiOptions() {
+  window.clearTimeout(state.uiSaveTimer);
+  const job = state.uiSaveQueue.then(async () => {
+    while (state.uiSavePending) {
+      const pending = state.uiSavePending;
+      state.uiSavePending = null;
+      if (pending.contextId !== state.contextId) continue;
+      try { await callBackend("setUiOptionsB", JSON.stringify(pending.patch)); }
+      catch (error) {
+        if (pending.contextId === state.contextId) {
+          const newer = state.uiSavePending;
+          state.uiSavePending = { contextId: pending.contextId,
+            patch: { ...pending.patch, ...(newer?.contextId === pending.contextId ? newer.patch : {}) } };
+        }
+        showToast(error.message, true);
+        return false;
+      }
+    }
+    return true;
+  });
+  state.uiSaveQueue = job.catch(() => false);
+  return job;
 }
 
 function releasePageResources() {

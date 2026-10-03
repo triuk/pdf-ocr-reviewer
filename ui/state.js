@@ -27,7 +27,9 @@ const state = {
   renderGeneration: 0,
   scanViews: new Map(),
   zoomRenderTimer: null,
-  zoomSaveTimer: null,
+  uiSaveTimer: null,
+  uiSavePending: null,
+  uiSaveQueue: Promise.resolve(),
   scanPan: null,
   markingDrag: null,
   applyingState: false,
@@ -123,7 +125,7 @@ function enqueueNavigation(work) {
     state.navigating = true;
     document.querySelectorAll(".file-ok input").forEach(input => { input.disabled = true; });
     document.querySelectorAll(".workspace, .issue-sidebar").forEach(node => { node.inert = true; });
-    try { return await work(); }
+    try { await flushUiOptions(); return await work(); }
     finally {
       state.navigating = false;
       document.querySelectorAll(".file-ok input").forEach(input => { input.disabled = state.reviewBusy; });

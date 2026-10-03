@@ -44,9 +44,9 @@ test('failed PDF open keeps the old document and loaded pages', async()=>{
 });
 
 test('navigation operations execute in order', async()=>{
-  const c=app();const d=deferred();const order=[];
-  const a=c.enqueueNavigation(async()=>{order.push('a-start');await d.promise;order.push('a-end');});
+  const c=app();const d=deferred();const started=deferred();const order=[];
+  const a=c.enqueueNavigation(async()=>{order.push('a-start');started.resolve();await d.promise;order.push('a-end');});
   const b=c.enqueueNavigation(async()=>{order.push('b');});
-  await Promise.resolve();assert.deepEqual(order,['a-start']);d.resolve();await Promise.all([a,b]);
+  await started.promise;assert.deepEqual(order,['a-start']);d.resolve();await Promise.all([a,b]);
   assert.deepEqual(order,['a-start','a-end','b']);assert.equal(c.state.navigating,false);
 });
