@@ -1,0 +1,110 @@
+{
+  "environment": {
+    "python": "3.14.7",
+    "pymupdf": "1.26.7",
+    "platform": "Linux-7.2.6-1-cachyos-x86_64-with-glibc2.44"
+  },
+  "fixture": {
+    "source": "synthetic RGB noise scans, seed 42",
+    "pdf_bytes": 86813295,
+    "pages": 60,
+    "manifest_bytes": 6638914,
+    "issues": 1000,
+    "history_per_issue": 20,
+    "samples": 5,
+    "raster_2400_pixels": 7680000
+  },
+  "operations": {
+    "issue_note": {
+      "median_ms": 451.58,
+      "max_ms": 464.85,
+      "response_bytes": 3493629,
+      "components_per_sample": {
+        "pdf_hash": {
+          "calls": 1.0,
+          "ms": 50.07
+        },
+        "backup": {
+          "calls": 1.0,
+          "ms": 55.46
+        },
+        "manifest_save": {
+          "calls": 1.0,
+          "ms": 179.44
+        },
+        "full_issue_state": {
+          "calls": 1.0,
+          "ms": 90.22
+        }
+      }
+    },
+    "file_note": {
+      "median_ms": 231.15,
+      "max_ms": 246.28,
+      "response_bytes": 92,
+      "components_per_sample": {
+        "backup": {
+          "calls": 1.0,
+          "ms": 54.21
+        },
+        "manifest_save": {
+          "calls": 1.0,
+          "ms": 167.2
+        }
+      }
+    },
+    "ui_option": {
+      "median_ms": 321.1,
+      "max_ms": 336.03,
+      "response_bytes": 272,
+      "components_per_sample": {
+        "backup": {
+          "calls": 1.0,
+          "ms": 55.58
+        },
+        "manifest_save": {
+          "calls": 1.0,
+          "ms": 178.6
+        }
+      }
+    },
+    "same_page_position": {
+      "median_ms": 238.58,
+      "max_ms": 254.63,
+      "response_bytes": 48,
+      "components_per_sample": {
+        "backup": {
+          "calls": 1.0,
+          "ms": 54.53
+        },
+        "manifest_save": {
+          "calls": 1.0,
+          "ms": 169.41
+        }
+      }
+    },
+    "pdf_hash_only": {
+      "median_ms": 49.48,
+      "max_ms": 51.06,
+      "response_bytes": 64,
+      "components_per_sample": {
+        "pdf_hash": {
+          "calls": 1.0,
+          "ms": 49.78
+        }
+      }
+    },
+    "render_1200": {
+      "median_ms": 172.28,
+      "max_ms": 176.06,
+      "response_bytes": 5502934,
+      "components_per_sample": {}
+    },
+    "render_2400": {
+      "median_ms": 180.88,
+      "max_ms": 181.83,
+      "response_bytes": 2268159,
+      "components_per_sample": {}
+    }
+  }
+}

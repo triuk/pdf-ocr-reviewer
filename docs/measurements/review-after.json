@@ -1,0 +1,97 @@
+{
+  "environment": {
+    "python": "3.14.7",
+    "pymupdf": "1.26.7",
+    "platform": "Linux-7.2.6-1-cachyos-x86_64-with-glibc2.44"
+  },
+  "fixture": {
+    "source": "synthetic RGB noise scans, seed 42",
+    "pdf_bytes": 86813295,
+    "pages": 60,
+    "manifest_bytes": 6638914,
+    "issues": 1000,
+    "history_per_issue": 20,
+    "samples": 5,
+    "raster_2400_pixels": 7680000
+  },
+  "operations": {
+    "issue_note": {
+      "median_ms": 146.52,
+      "max_ms": 149.19,
+      "response_bytes": 4227,
+      "components_per_sample": {
+        "pdf_hash": {
+          "calls": 1.0,
+          "ms": 49.66
+        },
+        "backup": {
+          "calls": 1.0,
+          "ms": 49.12
+        },
+        "manifest_save": {
+          "calls": 1.0,
+          "ms": 96.21
+        }
+      }
+    },
+    "file_note": {
+      "median_ms": 93.46,
+      "max_ms": 93.73,
+      "response_bytes": 92,
+      "components_per_sample": {
+        "backup": {
+          "calls": 1.0,
+          "ms": 45.54
+        },
+        "manifest_save": {
+          "calls": 1.0,
+          "ms": 93.03
+        }
+      }
+    },
+    "ui_option": {
+      "median_ms": 93.49,
+      "max_ms": 95.85,
+      "response_bytes": 272,
+      "components_per_sample": {
+        "backup": {
+          "calls": 0.8,
+          "ms": 37.11
+        },
+        "manifest_save": {
+          "calls": 0.8,
+          "ms": 75.13
+        }
+      }
+    },
+    "same_page_position": {
+      "median_ms": 3.84,
+      "max_ms": 4.25,
+      "response_bytes": 48,
+      "components_per_sample": {}
+    },
+    "pdf_hash_only": {
+      "median_ms": 50.55,
+      "max_ms": 50.71,
+      "response_bytes": 64,
+      "components_per_sample": {
+        "pdf_hash": {
+          "calls": 1.0,
+          "ms": 50.42
+        }
+      }
+    },
+    "render_1200": {
+      "median_ms": 171.23,
+      "max_ms": 175.9,
+      "response_bytes": 5502934,
+      "components_per_sample": {}
+    },
+    "render_2400": {
+      "median_ms": 181.62,
+      "max_ms": 183.47,
+      "response_bytes": 2268159,
+      "components_per_sample": {}
+    }
+  }
+}

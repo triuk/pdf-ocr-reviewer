@@ -80,7 +80,6 @@ def main():
         api = BackendApi(folder)
         try:
             opened = api.open_document(pdf.name)
-            geometry = api.active_document.page_geometry(0)
             api.add_issue(pdf.name, {'page_index': 0, 'bbox': [10, 10, 20, 20],
                                     'kind': 'position', 'expected_sha256': opened['ocr_sha256']})
             template = api.manifest['files'][pdf.name]['issues'][0]

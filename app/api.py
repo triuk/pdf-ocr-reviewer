@@ -20,7 +20,8 @@ from .manifest import (
     load_manifest,
     manifest_revision,
     save_manifest,
-    validate_manifest,
+    validate_ui_options,
+    check_manifest_revision,
     list_backups,
     restore_backup,
 )
@@ -240,14 +241,14 @@ class BackendApi:
 
     def add_issue_callback(self, event: Any) -> None:
         try:
-            event.return_string(self._ok(self.add_issue(event.get_string_at(0), json.loads(event.get_string_at(1)))))
+            event.return_string(self._ok(self.add_issue(event.get_string_at(0), json.loads(event.get_string_at(1)), compact=True)))
         except (KeyError, ValueError, ManifestError, PdfDocumentError, OSError) as exc:
             event.return_string(self._error("ISSUE_SAVE_FAILED", str(exc)))
 
     def update_issue_callback(self, event: Any) -> None:
         try:
             event.return_string(self._ok(self.update_issue(
-                event.get_string_at(0), event.get_string_at(1), json.loads(event.get_string_at(2)))))
+                event.get_string_at(0), event.get_string_at(1), json.loads(event.get_string_at(2)), compact=True)))
         except (KeyError, ValueError, ManifestError, PdfDocumentError, OSError) as exc:
             event.return_string(self._error("ISSUE_SAVE_FAILED", str(exc)))
 
@@ -347,15 +348,42 @@ class BackendApi:
         if expected_sha256 != self._document_sha256 or file_sha256(pdf.path) != self._document_sha256:
             raise ValueError("PDF se změnilo. Nejdříve použijte Obnovit.")
 
-    def _commit_issue(self, snapshot: dict[str, Any]) -> None:
+    def _file_candidate(self, file_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Copy changed branches only. Callers must replace nested values they edit."""
+        manifest = self._require_manifest()
+        entry = dict(self._entry(file_id))
+        candidate = {**manifest, "files": {**manifest["files"], file_id: entry}}
+        return candidate, entry
+
+    def _commit_manifest(self, candidate: dict[str, Any]) -> None:
+        previous = self._require_manifest()
+        self.manifest = candidate
         try:
             self._save_manifest()
         except ManifestError as exc:
-            self.manifest = snapshot
+            self.manifest = previous
             self._set_persistence_error(exc)
             raise
 
-    def add_issue(self, file_id: str, data: Any) -> dict[str, Any]:
+    def _check_noop(self) -> None:
+        assert self.current_folder is not None
+        try:
+            check_manifest_revision(self.current_folder, expected_revision=self._manifest_revision)
+        except ManifestError as exc:
+            self._set_persistence_error(exc)
+            raise
+
+    def _issue_response(self, file_id: str, issue: dict[str, Any], compact: bool) -> dict[str, Any]:
+        response = {"file_id": file_id, "issue_id": issue["id"]}
+        if not compact:
+            return {**response, **self._issue_state(file_id)}
+        public = copy.deepcopy(issue)
+        public["stale"] = issue["target_sha256"] != self._document_sha256
+        public["invalid_target"] = self._invalid_issue_target(issue)
+        return {**response, "issue": public, "issue_counts": issue_counts(self._entry(file_id)["issues"]),
+                "ocr_sha256": self._document_sha256}
+
+    def add_issue(self, file_id: str, data: Any, *, compact: bool = False) -> dict[str, Any]:
         with self._lock:
             if not isinstance(data, dict) or not isinstance(data.get("kind"), str) or data["kind"] not in ISSUE_KINDS:
                 raise ValueError("Invalid issue kind.")
@@ -371,13 +399,12 @@ class BackendApi:
                 "history": [{"at": now, "action": "created", "to": "open"}],
             }
             validate_issue(issue)
-            snapshot = copy.deepcopy(self._require_manifest())
-            entry = self._entry(file_id)
-            entry["issues"].append(issue)
-            self._commit_issue(snapshot)
-            return {"file_id": file_id, "issue_id": issue["id"], **self._issue_state(file_id)}
+            candidate, entry = self._file_candidate(file_id)
+            entry["issues"] = [*entry["issues"], issue]
+            self._commit_manifest(candidate)
+            return self._issue_response(file_id, issue, compact)
 
-    def update_issue(self, file_id: str, issue_id: str, patch: Any) -> dict[str, Any]:
+    def update_issue(self, file_id: str, issue_id: str, patch: Any, *, compact: bool = False) -> dict[str, Any]:
         with self._lock:
             if not isinstance(patch, dict) or set(patch) - {"status", "kind", "note", "expected_sha256"}:
                 raise ValueError("Invalid issue update.")
@@ -402,7 +429,8 @@ class BackendApi:
             now = datetime.now().astimezone().isoformat(timespec="seconds")
             changes = {key: value for key, value in patch.items() if key != "expected_sha256" and value != issue.get(key)}
             if not changes:
-                return {"file_id": file_id, "issue_id": issue_id, **self._issue_state(file_id)}
+                self._check_noop()
+                return self._issue_response(file_id, issue, compact)
             issue.update(changes)
             issue["updated_at"] = now
             issue["history"].append({
@@ -411,10 +439,11 @@ class BackendApi:
                 "previous": {key: previous.get(key) for key in changes}, "changes": changes,
             })
             validate_issue(issue)
-            snapshot = copy.deepcopy(self._require_manifest())
+            candidate, entry = self._file_candidate(file_id)
+            entry["issues"] = list(entry["issues"])
             entry["issues"][index] = issue
-            self._commit_issue(snapshot)
-            return {"file_id": file_id, "issue_id": issue_id, **self._issue_state(file_id)}
+            self._commit_manifest(candidate)
+            return self._issue_response(file_id, issue, compact)
 
     def render_page_packet(
         self,
@@ -516,53 +545,42 @@ class BackendApi:
 
     def set_last_page(self, file_id: str, page_index: int) -> dict[str, Any]:
         with self._lock:
-            snapshot = copy.deepcopy(self._require_manifest())
-            if page_index < 0:
-                raise ValueError("Page index cannot be negative.")
-            entry = self._entry(file_id)
-            entry["last_page"] = page_index
-            try:
-                self._save_manifest()
-            except ManifestError as exc:
-                self.manifest = snapshot
-                self._set_persistence_error(exc)
-                raise
+            if type(page_index) is not int or page_index < 0:
+                raise ValueError("Page index must be a non-negative integer.")
+            candidate, entry = self._file_candidate(file_id)
+            if entry["last_page"] == page_index:
+                self._check_noop()
+            else:
+                entry["last_page"] = page_index
+                self._commit_manifest(candidate)
             return {"file_id": file_id, "last_page": page_index}
 
     def set_file_note(self, file_id: str, note: str) -> dict[str, Any]:
         with self._lock:
-            snapshot = copy.deepcopy(self._require_manifest())
-            entry = self._entry(file_id)
-            entry["note"] = note
-            try:
-                self._save_manifest()
-            except ManifestError as exc:
-                self.manifest = snapshot
-                self._set_persistence_error(exc)
-                raise
+            if not isinstance(note, str):
+                raise ValueError("Note must be a string.")
+            candidate, entry = self._file_candidate(file_id)
+            if entry["note"] == note:
+                self._check_noop()
+            else:
+                entry["note"] = note
+                self._commit_manifest(candidate)
             return {"file_id": file_id, "note": note}
 
     def set_ui_options(self, options: Any) -> dict[str, Any]:
         with self._lock:
-            snapshot = copy.deepcopy(self._require_manifest())
             if not isinstance(options, dict):
                 raise ValueError("UI options must be an object.")
             manifest = self._require_manifest()
-            ui = manifest["ui"]
             known = {"issue_kind", "zoom_percent", "ocr_mode", "overlay", "status_filter", "name_filter", "auto_advance", "issue_filter", "review_filter"}
             if set(options) - known:
                 raise ValueError("Unknown UI option.")
-            candidate = copy.deepcopy(manifest)
-            candidate["ui"].update(options)
-            validate_manifest(candidate)
-            self.manifest = candidate
-            ui = candidate["ui"]
-            try:
-                self._save_manifest()
-            except ManifestError as exc:
-                self.manifest = snapshot
-                self._set_persistence_error(exc)
-                raise
+            ui = {**manifest["ui"], **options}
+            validate_ui_options(ui)
+            if ui == manifest["ui"]:
+                self._check_noop()
+            else:
+                self._commit_manifest({**manifest, "ui": ui})
             return dict(ui)
 
     def export_csv(self) -> str:

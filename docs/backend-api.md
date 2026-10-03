@@ -18,7 +18,7 @@ This pattern is adopted from the reference project.
 | `openFolderB(path)` | validates the path, loads the manifest, and scans PDFs |
 | `refreshFolderB()` | rescans the current folder |
 | `openDocumentB(fileId)` | opens a PDF and returns page metadata |
-| `requestPageB(requestId, fileId, pageIndex, renderWidth, ocrMode)` | queues a page render request |
+| `requestPageB(requestId, fileId, pageIndex, renderWidth)` | renders a page packet |
 | `setReviewCompleteB(fileId, payloadJson)` | sets independent whole-file inspection completion |
 | `setFileStatusB(fileId, status)` | legacy classification API, retained for compatibility |
 | `setLastPageB(fileId, pageIndex)` | saves the last position |
@@ -41,11 +41,13 @@ both include `review_complete`. CSV appends `review_complete` and `review_comple
 
 `addIssueB` accepts `page_index`, `bbox`, `kind`, optional `note`, and
 `expected_sha256` from `openDocumentB`. `updateIssueB` accepts `expected_sha256`
-and any of `note`, `kind`, `status`. Both return `file_id`, `issue_id`, `issues`,
+and any of `note`, `kind`, `status`. Both return `file_id`, `issue_id`, the changed `issue`,
 `issue_counts` and `ocr_sha256`. Each issue in responses also includes computed
-`stale`; this transient flag is not written to the manifest.
+`stale` and `invalid_target`; these transient flags are not written to the manifest.
 
-`openDocumentB` includes the same issue data. File-list responses include status
+`openDocumentB` returns the complete `issues` list. For Python callers,
+`add_issue`/`update_issue` retain full responses by default; `compact=True` selects
+the smaller response used by the UI. File-list responses include status
 counts for the regions. `refreshFolderB` rereads the manifest; the frontend then
 reopens the active document to invalidate old renders and restore review position.
 Every save checks that the manifest has not been replaced externally since load or

@@ -185,7 +185,13 @@ function applyIssueResponse(data) {
   const file = state.files.find((item) => item.file_id === data.file_id);
   if (file) file.issue_counts = data.issue_counts;
   if (state.activeFileId === data.file_id && state.document) {
-    Object.assign(state.document, { issues: data.issues, issue_counts: data.issue_counts });
+    if (Array.isArray(data.issues)) state.document.issues = data.issues;
+    else if (data.issue) {
+      const index = state.document.issues.findIndex(issue => issue.id === data.issue.id);
+      if (index < 0) state.document.issues.push(data.issue);
+      else state.document.issues[index] = data.issue;
+    }
+    state.document.issue_counts = data.issue_counts;
   }
   renderFileList();
   setSaveState("Manifest uložen", false);

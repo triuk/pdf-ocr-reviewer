@@ -81,3 +81,12 @@ test('deletion advances in filtered order, wraps, and clears the final selection
   assert.deepEqual(selected,['last','first',null]);
   assert.equal(c.state.document.issues[1].status,'open');
 });
+
+test('compact issue replies replace only their issue and append new marks without losing others',()=>{
+  const c=app(['state.js','issues.js']);
+  c.state.files=[{file_id:'a.pdf'}];c.state.document.issues=[{id:'one',note:'old'},{id:'two',note:'keep'}];
+  c.applyIssueResponse({file_id:'a.pdf',issue:{id:'one',note:'new'},issue_counts:{open:2}});
+  assert.equal(c.state.document.issues[0].note,'new');assert.equal(c.state.document.issues[1].note,'keep');
+  c.applyIssueResponse({file_id:'a.pdf',issue:{id:'three',note:'added'},issue_counts:{open:3}});
+  assert.equal(c.state.document.issues.length,3);assert.equal(c.state.files[0].issue_counts.open,3);
+});

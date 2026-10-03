@@ -107,6 +107,28 @@ def migrate_manifest(data: Any) -> Any:
     return data
 
 
+def validate_ui_options(ui: dict[str, Any]) -> None:
+    def field(value, predicate, path):
+        if not predicate(value):
+            raise ManifestFormatError(f"Invalid {path}: {value!r}")
+
+    def choice(value, choices):
+        return isinstance(value, str) and value in choices
+
+    string = lambda value: isinstance(value, str)
+    nullable_string = lambda value: value is None or isinstance(value, str)
+    field(ui.get("zoom_percent", 100), lambda n: type(n) is int and 25 <= n <= 400, "ui.zoom_percent")
+    field(ui.get("ocr_mode", "pdf_order"), lambda v: choice(v, VALID_OCR_MODES), "ui.ocr_mode")
+    field(ui.get("issue_kind", "position"), lambda v: choice(v, ISSUE_KINDS), "ui.issue_kind")
+    field(ui.get("status_filter", "all"), lambda v: choice(v, {*VALID_FILE_STATUSES, "all"}), "ui.status_filter")
+    field(ui.get("review_filter", "all"), lambda v: choice(v, {"all", "unreviewed", "reviewed"}), "ui.review_filter")
+    field(ui.get("issue_filter", "all"), lambda v: choice(v, {"all", "active", "open", "fixed"}), "ui.issue_filter")
+    for key in ("overlay", "auto_advance"):
+        field(ui.get(key, True), lambda v: type(v) is bool, f"ui.{key}")
+    field(ui.get("name_filter", ""), string, "ui.name_filter")
+    field(ui.get("last_file"), nullable_string, "ui.last_file")
+
+
 def validate_manifest(data: Any) -> None:
     if not isinstance(data, dict):
         raise ManifestFormatError("Manifest root must be an object.")
@@ -134,16 +156,7 @@ def validate_manifest(data: Any) -> None:
     integer = lambda value: type(value) is int and value >= 0
     string = lambda value: isinstance(value, str)
     nullable_string = lambda value: value is None or isinstance(value, str)
-    field(ui.get("zoom_percent", 100), lambda n: type(n) is int and 25 <= n <= 400, "ui.zoom_percent")
-    field(ui.get("ocr_mode", "pdf_order"), lambda v: choice(v, VALID_OCR_MODES), "ui.ocr_mode")
-    field(ui.get("issue_kind", "position"), lambda v: choice(v, ISSUE_KINDS), "ui.issue_kind")
-    field(ui.get("status_filter", "all"), lambda v: choice(v, {*VALID_FILE_STATUSES, "all"}), "ui.status_filter")
-    field(ui.get("review_filter", "all"), lambda v: choice(v, {"all", "unreviewed", "reviewed"}), "ui.review_filter")
-    field(ui.get("issue_filter", "all"), lambda v: choice(v, {"all", "active", "open", "fixed"}), "ui.issue_filter")
-    for key in ("overlay", "auto_advance"):
-        field(ui.get(key, True), lambda v: type(v) is bool, f"ui.{key}")
-    field(ui.get("name_filter", ""), string, "ui.name_filter")
-    field(ui.get("last_file"), nullable_string, "ui.last_file")
+    validate_ui_options(ui)
     field(data.get("updated_at"), nullable_string, "updated_at")
 
     for file_id, entry in files.items():
@@ -198,6 +211,16 @@ def ensure_file_entry(manifest: dict[str, Any], pdf: ScannedPdf) -> dict[str, An
     return entry
 
 
+def check_manifest_revision(folder: Path, *, expected_revision: str | None) -> None:
+    """Verify a no-op against disk without creating a write or backup."""
+    try:
+        with file_lock(folder / f".{MANIFEST_FILENAME}.lock"):
+            if manifest_revision(folder) != expected_revision:
+                raise ManifestError("Manifest změnil jiný nástroj. Použijte Obnovit; novější data nebyla přepsána.")
+    except OSError as exc:
+        raise ManifestWriteError(f"Manifest cannot be locked or read: {exc}") from exc
+
+
 def save_manifest(folder: Path, manifest: dict[str, Any], *, expected_revision: str | None) -> str:
     """Compare and replace under a lock shared by all cooperating writers."""
     try:
@@ -211,7 +234,7 @@ def save_manifest(folder: Path, manifest: dict[str, Any], *, expected_revision: 
 
 def _write_manifest(folder: Path, manifest: dict[str, Any]) -> str:
     validate_manifest(manifest)
-    data = {"repair_instructions": copy.deepcopy(manifest["repair_instructions"]), **copy.deepcopy(manifest)}
+    data = {"repair_instructions": manifest["repair_instructions"], **manifest}
     data["updated_at"] = datetime.now().astimezone().isoformat(timespec="seconds")
     serialized = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     target = folder / MANIFEST_FILENAME
