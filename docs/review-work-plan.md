@@ -3,8 +3,10 @@
 Datum: 2026-09-29. Výchozí revize: `02afcfb` (`v0.1.4`).
 Stav: etapy 1–5 implementovány; uživatel ergonomii schválil 2026-10-03.
 Etapa 6 je dokončena, měření a rozhodnutí jsou v [performance.md](performance.md).
-V etapě 7 zbývá vzdálené CI, Windows a vydání.
-Windows ověření zámků zůstává otevřené; připraveny jsou CI testy pro obě platformy.
+Kontroly etapy 7 prošly 2026-10-03 na Linuxu i Windows, včetně souborových zámků
+a self-testů obou binárek: [úspěšný běh CI](https://github.com/triuk/pdf-ocr-reviewer/actions/runs/37112115852).
+Release commit připravuje v0.1.5; workflow vydání zveřejní až po opakovaném
+úspěšném ověření finálního commitu.
 
 Plán pokrývá sedm nálezů z celkového code review a navržená vylepšení
 testování, ergonomie, zotavení po chybě a výkonu. Nejvyšší prioritu má
@@ -31,7 +33,7 @@ Priorita: nejvyšší. Řeší nálezy 1, 4 a 7; podmínka pro další úpravy p
 - [x] Zavést společný zápisový helper a protokol zamčení pro reviewer i externí
       opravný nástroj. Kontrola očekávané revize a atomický zápis proběhnou pod
       týmž zámkem. Konflikt nesmí být vyřešen slepým opakováním nad novou revizí.
-- [ ] Ošetřit souběh dvou instancí, timeout zámku a ukončení procesu; ověřit
+- [x] Ošetřit souběh dvou instancí, timeout zámku a ukončení procesu; ověřit
       chování na Linuxu i Windows. Nepodporovaný zámek nesmí tiše vypnout ochranu.
 - [x] Zpřístupnit helper externímu opravnému postupu a aktualizovat instrukce
       i dokumentaci. Popsat hranici ochrany: nespolupracující přímý zápis cizího
@@ -50,9 +52,9 @@ Hotovo, když testy souběhu neztratí cizí změny, chybná data mají srozumit
 chyby a odmítnuté operace nezmění stav. Ověřit také starší manifesty,
 neznámá pole, složku pouze pro čtení a selhání zápisu.
 
-Implementováno a ověřeno na Linuxu: společný zámek, CLI, validace a atomické
-změny nastavení. Test zámku je přenositelný; skutečné ověření na Windows
-zůstává součástí následného CI/akceptace.
+Implementováno a automaticky ověřeno na Linuxu i Windows: společný zámek,
+CLI, validace a atomické změny nastavení. CI zahrnuje souběžné procesy,
+timeout zámku a uvolnění zámku po ukončení procesu.
 
 ## 2. Spolehlivé přepínání dokumentů a opožděné odpovědi
 
@@ -125,7 +127,7 @@ srozumitelně rozlišuje uložený stav, koncept a konflikt.
 - [x] Uživatelsky ověřit zjednodušený postup podle `ergonomics-acceptance.md` (schváleno 2026-10-03).
 
 OCR běží mimo program; reviewer pouze připravuje manifest a načítá výsledky.
-Uživatelská zkouška je schválená, etapa 6 může pokračovat.
+Uživatelská zkouška je schválená; navazující etapa 6 je dokončená.
 
 ## 6. Výkon autosave a renderování
 
@@ -157,7 +159,7 @@ dat, detekce změněného PDF a omezené spotřeby paměti.
 Testy doplňovat průběžně v etapách 1–6; tato etapa dokončí jejich zapojení a
 ověří celý výsledek.
 
-- [ ] Zařadit Python a JS regresní testy do CI; souborové zámky testovat
+- [x] Zařadit Python a JS regresní testy do CI; souborové zámky testovat
       na Linuxu i Windows.
 - [x] Zařadit prohlížečový smoke test přes skutečné WebUI na Linuxu.
       Používat malé syntetické PDF, včetně otočené/oříznuté stránky;
@@ -167,7 +169,8 @@ ověří celý výsledek.
       obnovení připomínky a obnovu po konfliktu či restartu.
 - [x] Aktualizovat popis manifestu, API, klávesových zkratek, záloh a externího
       zápisového postupu; uvést skutečně ověřené platformy a známé limity.
-- [ ] Připravit release poznámky a vydání až po splnění přejímacích podmínek.
+- [x] Připravit release poznámky a vydání až po splnění přejímacích podmínek.
+      Publikaci v0.1.5 provede workflow po kontrolách release commitu.
 
 ## Postup práce a další krok
 
@@ -179,11 +182,11 @@ za hotovou funkci bez ověření.
 Etapy 1–3 tvoří první celek oprav potvrzených chyb. Etapy 4–6 přidávají
 odsouhlasená vylepšení. Etapa 7 je společná podmínka vydání.
 
-Nejbližší konkrétní krok: spustit CI pro Linux/Windows, ověřit obě binárky
-a po splnění kontrol dokončit vydání podle etapy 7.
+Nejbližší konkrétní krok: nechat workflow ověřit release commit a publikovat
+v0.1.5; poté ověřit dostupnost obou binárek a jejich kontrolní součty.
 Změny jsou rozděleny do samostatných commitů.
 
 Výchozí ověření z code review 2026-09-28: 42 úspěšných Python testů,
 aplikační self-test a prohlížečový smoke test na dočasné kopii dodaného PDF.
-Sedm nálezů bylo reprodukováno samostatně; tyto reprodukce je potřeba převést
-do trvalých regresních testů.
+Sedm nálezů bylo reprodukováno samostatně a následně pokryto trvalými
+regresními testy. Závěrečné CI obsahuje 83 Python testů a 23 JS scénářů.

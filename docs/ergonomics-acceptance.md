@@ -69,6 +69,8 @@ a výběr zálohy. Zoom se ověřuje přes skutečné Ctrl + kolečko: stálá v
 OCR a ovládání, bod pod kurzorem, posun prostředním tlačítkem, souřadnice označení
 po zoomu/posunu a návrat na 100 %. Blokování zoomu během reálného tažení ověřuje
 vložená DOM wheel událost. Zdrojový i zabalený self-test prošly před předáním binárky.
-Windows běh a úplné CI zatím čekají na vzdálené ověření. Výkonová etapa je
-dokončená; měření popisuje `performance.md`. Běžný i otočený/oříznutý scénář
-je zařazen do CI na Linuxu.
+Vzdálené [CI 2026-10-03](https://github.com/triuk/pdf-ocr-reviewer/actions/runs/37112115852)
+prošlo na Linuxu i Windows: 83 Python testů, 23 JS scénářů a zdrojový i zabalený
+self-test na obou platformách. Běžný i otočený/oříznutý prohlížečový scénář
+prošel v CI na Linuxu. Toto automatické ověření nenahrazuje ruční zkoušku
+ergonomie na Windows. Výkonová etapa je dokončená; měření popisuje `performance.md`.
