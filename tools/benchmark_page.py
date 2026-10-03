@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import shutil
+import sys
+import tempfile
 import time
 import tracemalloc
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.api import BackendApi
 from app.raw_packet import unpack_raw_packet
@@ -25,9 +30,12 @@ def main() -> int:
     if args.page < 1:
         raise SystemExit("Page number must be at least 1.")
 
+    workspace = tempfile.TemporaryDirectory(prefix="ocr-page-benchmark-")
+    copied_pdf = Path(workspace.name) / pdf.name
+    shutil.copyfile(pdf, copied_pdf)
     api = BackendApi()
     try:
-        api.open_folder(pdf.parent)
+        api.open_folder(copied_pdf.parent)
         api.open_document(pdf.name)
         tracemalloc.start()
         started = time.perf_counter()
@@ -54,6 +62,7 @@ def main() -> int:
         print(f"Tracemalloc peak: {peak_bytes} bytes")
     finally:
         api.close()
+        workspace.cleanup()
     return 0
 
 

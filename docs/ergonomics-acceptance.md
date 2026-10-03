@@ -2,7 +2,8 @@
 
 Aktualizováno 2026-09-30 podle zpětné vazby: OCR průchody probíhají mimo program,
 manifest je jejich řídicí soubor. Potvrzování V → C ani vracení R už není potřeba.
-Výkonová etapa 6 ani nové vydání zatím nejsou zahájené.
+Uživatel schválil ergonomii 2026-10-03 a zadal pokračování. Výkonová etapa 6
+navazuje na schválené ovládání.
 
 ## Spuštění připravené Linuxové verze
 

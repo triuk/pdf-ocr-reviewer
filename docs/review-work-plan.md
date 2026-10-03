@@ -1,7 +1,8 @@
 # Plán práce po code review
 
 Datum: 2026-09-29. Výchozí revize: `02afcfb` (`v0.1.4`).
-Stav: etapy 1–5 implementovány; čeká se na [uživatelskou zkoušku ergonomie](ergonomics-acceptance.md).
+Stav: etapy 1–5 implementovány; uživatel ergonomii schválil 2026-10-03.
+Probíhá měřením podložená etapa 6 a následná automatizace ověření v etapě 7.
 Windows ověření zámků zůstává otevřené; připraveny jsou CI testy pro obě platformy.
 
 Plán pokrývá sedm nálezů z celkového code review a navržená vylepšení
@@ -120,10 +121,10 @@ srozumitelně rozlišuje uložený stav, koncept a konflikt.
 - [x] Aktualizovat manifestové instrukce a migrovat původní pravidla bez ztráty historie.
 - [x] Ověřit externí výsledek, smazání/obnovu, opakovaný průchod a filtry přes více PDF.
 - [x] Zjednodušit lištu: Obnovit, nezávislé OK u každého PDF vlevo, Zálohy/CSV v nabídce Další.
-- [ ] Uživatelsky ověřit zjednodušený postup podle `ergonomics-acceptance.md`.
+- [x] Uživatelsky ověřit zjednodušený postup podle `ergonomics-acceptance.md` (schváleno 2026-10-03).
 
 OCR běží mimo program; reviewer pouze připravuje manifest a načítá výsledky.
-Etapu 6 zahájit až po vyhodnocení uživatelské zkoušky.
+Uživatelská zkouška je schválená, etapa 6 může pokračovat.
 
 ## 6. Výkon autosave a renderování
 
@@ -172,9 +173,9 @@ za hotovou funkci bez ověření.
 Etapy 1–3 tvoří první celek oprav potvrzených chyb. Etapy 4–6 přidávají
 odsouhlasená vylepšení. Etapa 7 je společná podmínka vydání.
 
-Nejbližší konkrétní krok: uživatelská zkouška podle `ergonomics-acceptance.md`.
-Po její zpětné vazbě opravit případné nedostatky ovládání a dohodnout pokračování
-etapami 6–7. Změny jsou rozděleny do samostatných commitů.
+Nejbližší konkrétní krok: změřit zápisy, odpovědi a renderování, zavést doložené
+optimalizace a doplnit automatické ověření podle etap 6–7.
+Změny jsou rozděleny do samostatných commitů.
 
 Výchozí ověření z code review 2026-09-28: 42 úspěšných Python testů,
 aplikační self-test a prohlížečový smoke test na dočasné kopii dodaného PDF.
