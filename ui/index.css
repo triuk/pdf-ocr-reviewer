@@ -122,7 +122,7 @@ input, select, textarea { background: var(--panel); color: var(--text); padding:
 .file-summary { padding: 8px 10px; color: var(--muted); border-bottom: 1px solid var(--border); }
 .file-list { flex: 1; min-height: 0; overflow: auto; }
 .file-item {
-  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start;
+  display: grid; grid-template-columns: auto 24px minmax(0, 1fr); align-items: start;
   border-bottom: 1px solid var(--border); color: var(--text); background: transparent;
 }
 .file-item:hover { background: var(--panel-soft); }
@@ -136,6 +136,10 @@ input, select, textarea { background: var(--panel); color: var(--text); padding:
 .file-ok:has(input:checked) { color: var(--success); }
 .file-ok:has(input:disabled) { opacity: .5; cursor: default; }
 .file-changed { color: var(--warning); }
+.file-acceptance { width: 20px; height: 20px; min-height: 0; padding: 0; margin: 8px 0 0 4px; border: 1px solid currentColor; border-radius: 4px; color: var(--muted); background: transparent; font-size: 14px; line-height: 18px; }
+.file-acceptance.pending { color: var(--warning); }
+.file-acceptance.accepted { color: var(--success); background: var(--panel-soft); }
+.file-acceptance:disabled { opacity: .65; cursor: default; }
 
 .workspace {
   min-width: 0;

@@ -126,6 +126,30 @@ def main():
             wait_for("typeof state !== 'undefined' && state.files.length === 1")
             click(".file-item .file-open")
             wait_for("state.pageData.has(0)")
+            # Actual compact acceptance control: separate from OK, hash-bound,
+            # persistent across reload, and explicitly revocable.
+            assert js("return document.querySelector('.file-acceptance').disabled;")
+            click(".file-item .file-ok input")
+            wait_for("!state.reviewBusy && !document.querySelector('.file-acceptance').disabled")
+            assert js("return document.querySelector('.file-acceptance').classList.contains('pending');")
+            assert js("return document.querySelector('.file-acceptance').getBoundingClientRect().width;") == 20
+            args.screenshot.with_name(args.screenshot.stem + '-acceptance-pending.png').write_bytes(
+                base64.b64decode(request('GET', f'/session/{session}/screenshot')))
+            click(".file-acceptance")
+            wait_for("!state.reviewBusy && document.querySelector('.file-acceptance').classList.contains('accepted')")
+            accepted = load_manifest(folder)["files"][pdf.name]
+            assert accepted["review_complete"] is True
+            assert accepted["repair_acceptance"]["ocr_sha256"] == file_sha256(pdf)
+            assert accepted["repair_acceptance"]["accepted_at"]
+            args.screenshot.with_name(args.screenshot.stem + '-acceptance-green.png').write_bytes(
+                base64.b64decode(request('GET', f'/session/{session}/screenshot')))
+            click("#refreshFolderId")
+            wait_for("!state.navigating && state.pageData.has(0) && document.querySelector('.file-acceptance').classList.contains('accepted')")
+            click(".file-acceptance")
+            wait_for("!state.reviewBusy && !state.document.repairs_accepted")
+            assert [r['action'] for r in load_manifest(folder)['files'][pdf.name]['repair_acceptance_history']] == ['accepted', 'revoked']
+            click(".file-item .file-ok input")
+            wait_for("!state.reviewBusy && !state.document.review_complete")
             click("#markIssueId")
             js("elements.issueKindId.value='oversized';elements.issueKindId.dispatchEvent(new Event('change')); ")
             assert js("return elements.issueKindId.selectedOptions[0].textContent;") == "Špatná velikost boxu"

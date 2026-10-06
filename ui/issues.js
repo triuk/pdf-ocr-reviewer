@@ -183,7 +183,11 @@ async function navigateIssue(direction) {
 
 function applyIssueResponse(data) {
   const file = state.files.find((item) => item.file_id === data.file_id);
-  if (file) file.issue_counts = data.issue_counts;
+  if (file) {
+    file.issue_counts = data.issue_counts;
+    file.repairs_accepted = data.repairs_accepted;
+    file.repair_accepted_at = data.repair_accepted_at;
+  }
   if (state.activeFileId === data.file_id && state.document) {
     if (Array.isArray(data.issues)) state.document.issues = data.issues;
     else if (data.issue) {
@@ -192,6 +196,8 @@ function applyIssueResponse(data) {
       else state.document.issues[index] = data.issue;
     }
     state.document.issue_counts = data.issue_counts;
+    state.document.repairs_accepted = data.repairs_accepted;
+    state.document.repair_accepted_at = data.repair_accepted_at;
   }
   renderFileList();
   setSaveState("Manifest uložen", false);

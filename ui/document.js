@@ -27,7 +27,13 @@ async function openDocumentNow(fileId, afterReload = false) {
       setSaveState("Poznámka souboru není uložena; zůstala v editoru", true);
     }
     const file = state.files.find((item) => item.file_id === fileId);
-    if (file) { file.issue_counts = documentData.issue_counts; file.status = documentData.status; file.review_complete = documentData.review_complete; }
+    if (file) {
+      file.issue_counts = documentData.issue_counts; file.status = documentData.status;
+      file.review_complete = documentData.review_complete;
+      file.repairs_accepted = documentData.repairs_accepted;
+      file.repair_accepted_at = documentData.repair_accepted_at;
+      file.identity_token = documentData.identity_token;
+    }
     renderFileList();
     refreshIssueViews();
     renderDraftRecovery();

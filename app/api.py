@@ -25,7 +25,7 @@ from .manifest import (
     list_backups,
     restore_backup,
 )
-from .models import VALID_FILE_STATUSES, VALID_OCR_MODES, FileIdentity, ScannedPdf
+from .models import VALID_FILE_STATUSES, VALID_OCR_MODES, FileIdentity, ScannedPdf, repair_acceptance_state
 from .pdf_document import PdfDocument, PdfDocumentError
 from .raw_packet import pack_raw_packet
 from .review import ISSUE_KINDS, companion_resources, file_sha256, issue_counts, validate_issue
@@ -68,6 +68,7 @@ class BackendApi:
             "refreshFolderB": (0, self.refresh_folder_callback), "openDocumentB": (1, self.open_document_callback),
             "requestPageB": (4, self.request_page_callback), "setFileStatusB": (2, self.set_file_status_callback),
             "setReviewCompleteB": (2, self.set_review_complete_callback),
+            "setRepairAcceptanceB": (2, self.set_repair_acceptance_callback),
             "toggleProblemPageB": (2, self.toggle_problem_page_callback), "setLastPageB": (2, self.set_last_page_callback),
             "setFileNoteB": (2, self.set_file_note_callback), "setUiOptionsB": (1, self.set_ui_options_callback),
             "exportCsvB": (0, self.export_csv_callback), "addIssueB": (2, self.add_issue_callback),
@@ -78,7 +79,7 @@ class BackendApi:
         window.bind("deleteDraftB", self.delete_draft_callback)
         window.bind("listBackupsB", self.list_backups_callback)
         window.bind("restoreBackupB", self.restore_backup_callback)
-        document_bound = {"requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB"}
+        document_bound = {"requestPageB", "setFileStatusB", "toggleProblemPageB", "setLastPageB", "setFileNoteB", "addIssueB", "updateIssueB", "setRepairAcceptanceB"}
         for name, (argc, callback) in bindings.items():
             window.bind(name, self._context_callback(callback, argc, name in document_bound, 1 if name == "requestPageB" else 0))
 
@@ -210,6 +211,13 @@ class BackendApi:
         except (KeyError, ValueError, ManifestError) as exc:
             event.return_string(self._error("PROBLEM_PAGE_SAVE_FAILED", str(exc)))
 
+    def set_repair_acceptance_callback(self, event: Any) -> None:
+        try:
+            result = self.set_repair_acceptance(event.get_string_at(0), json.loads(event.get_string_at(1)))
+            event.return_string(self._ok(result))
+        except (KeyError, ValueError, ManifestError, OSError) as exc:
+            event.return_string(self._error("REPAIR_ACCEPTANCE_SAVE_FAILED", str(exc)))
+
     def set_last_page_callback(self, event: Any) -> None:
         try:
             file_id = event.get_string_at(0)
@@ -320,6 +328,8 @@ class BackendApi:
                 "manifest_revision": self._manifest_revision,
                 "status": entry.get("status", "unreviewed"),
                 "review_complete": entry["review_complete"],
+                "identity_token": pdf.identity.to_token(),
+                **repair_acceptance_state(entry),
                 "last_page": entry.get("last_page", 0),
                 "problem_pages": entry.get("problem_pages", []),
                 "note": entry.get("note", ""),
@@ -333,7 +343,8 @@ class BackendApi:
         for issue in issues:
             issue["stale"] = issue["target_sha256"] != self._document_sha256
             issue["invalid_target"] = self._invalid_issue_target(issue)
-        return {"issues": issues, "issue_counts": issue_counts(issues), "ocr_sha256": self._document_sha256}
+        return {"issues": issues, "issue_counts": issue_counts(issues), "ocr_sha256": self._document_sha256,
+                **repair_acceptance_state(entry)}
 
     def _invalid_issue_target(self, issue: dict[str, Any]) -> bool:
         if self.active_document is None or issue["page_index"] >= self.active_document.page_count:
@@ -381,7 +392,7 @@ class BackendApi:
         public["stale"] = issue["target_sha256"] != self._document_sha256
         public["invalid_target"] = self._invalid_issue_target(issue)
         return {**response, "issue": public, "issue_counts": issue_counts(self._entry(file_id)["issues"]),
-                "ocr_sha256": self._document_sha256}
+                "ocr_sha256": self._document_sha256, **repair_acceptance_state(self._entry(file_id))}
 
     def add_issue(self, file_id: str, data: Any, *, compact: bool = False) -> dict[str, Any]:
         with self._lock:
@@ -516,6 +527,34 @@ class BackendApi:
                 raise
             return self._require_file(file_id).to_public_dict(entry)
 
+    def set_repair_acceptance(self, file_id: str, payload: Any) -> dict[str, Any]:
+        with self._lock:
+            if (not isinstance(payload, dict) or type(payload.get("accepted")) is not bool
+                    or set(payload) != {"accepted", "expected_sha256", "expected_identity"}):
+                raise ValueError("Invalid repair acceptance update.")
+            self._check_issue_document(file_id, payload["expected_sha256"])
+            pdf = self._require_file(file_id)
+            stat = pdf.path.stat()
+            if (payload["expected_identity"] != pdf.identity.to_token()
+                    or FileIdentity(stat.st_size, stat.st_mtime_ns).to_token() != pdf.identity.to_token()):
+                raise ValueError("PDF se změnilo. Nejdříve použijte Obnovit.")
+            candidate, entry = self._file_candidate(file_id)
+            counts = issue_counts(entry["issues"])
+            if payload["accepted"] and (not entry["review_complete"] or counts["open"] or counts["fixed"]):
+                raise ValueError("Dokončete prohlídku pomocí OK a odstraňte vyhovující připomínky křížkem ×.")
+            if payload["accepted"] == repair_acceptance_state(entry)["repairs_accepted"]:
+                self._check_noop()
+                return pdf.to_public_dict(entry)
+            at = datetime.now().astimezone().isoformat(timespec="seconds")
+            entry["repair_acceptance"] = ({"ocr_sha256": self._document_sha256, "accepted_at": at}
+                                           if payload["accepted"] else None)
+            entry["repair_acceptance_history"] = [*entry.get("repair_acceptance_history", []),
+                {"action": "accepted" if payload["accepted"] else "revoked",
+                 "ocr_sha256": self._document_sha256, "at": at}]
+            entry["identity"] = pdf.identity.to_dict()
+            self._commit_manifest(candidate)
+            return pdf.to_public_dict(entry)
+
     def toggle_problem_page(self, file_id: str, page_index: int) -> dict[str, Any]:
         with self._lock:
             snapshot = copy.deepcopy(self._require_manifest())
@@ -591,6 +630,7 @@ class BackendApi:
             writer.writerow([
                 "file", "status", "changed_since_review", "problem_pages",
                 "note", "reviewed_at", "size", "mtime_ns", "review_complete", "review_completed_at",
+                "repairs_accepted", "repair_accepted_at", "repair_accepted_sha256",
             ])
             entries = manifest.get("files", {})
             for pdf in self.files.values():
@@ -609,6 +649,9 @@ class BackendApi:
                     pdf.identity.mtime_ns,
                     "true" if entry.get("review_complete", entry.get("status") == "ok") else "false",
                     entry.get("review_completed_at") or "",
+                    "true" if repair_acceptance_state(entry, changed)["repairs_accepted"] else "false",
+                    repair_acceptance_state(entry, changed)["repair_accepted_at"] or "",
+                    (entry.get("repair_acceptance") or {}).get("ocr_sha256", ""),
                 ])
             return output.getvalue()
 

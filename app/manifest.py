@@ -168,6 +168,24 @@ def validate_manifest(data: Any) -> None:
         field(entry.get("reviewed_at"), nullable_string, path + ".reviewed_at")
         field(entry.get("review_complete", False), lambda v: type(v) is bool, path + ".review_complete")
         field(entry.get("review_completed_at"), nullable_string, path + ".review_completed_at")
+        def acceptance_record(record, record_path, history=False):
+            field(record, lambda v: isinstance(v, dict), record_path)
+            field(record.get("ocr_sha256"), valid_hash, record_path + ".ocr_sha256")
+            time_key = "at" if history else "accepted_at"
+            try:
+                timestamp = datetime.fromisoformat(record.get(time_key, ""))
+                valid_time = timestamp.utcoffset() is not None
+            except (ValueError, TypeError):
+                valid_time = False
+            field(record.get(time_key), lambda v: valid_time, record_path + "." + time_key)
+            if history:
+                field(record.get("action"), lambda v: choice(v, {"accepted", "revoked"}), record_path + ".action")
+        if entry.get("repair_acceptance") is not None:
+            acceptance_record(entry["repair_acceptance"], path + ".repair_acceptance")
+        history = entry.get("repair_acceptance_history", [])
+        field(history, lambda v: isinstance(v, list), path + ".repair_acceptance_history")
+        for index, record in enumerate(history):
+            acceptance_record(record, f"{path}.repair_acceptance_history[{index}]", history=True)
         pages = entry.get("problem_pages", [])
         field(pages, lambda v: isinstance(v, list) and all(integer(n) for n in v), path + ".problem_pages")
         if "identity" in entry:

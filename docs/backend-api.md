@@ -20,6 +20,7 @@ This pattern is adopted from the reference project.
 | `openDocumentB(fileId)` | opens a PDF and returns page metadata |
 | `requestPageB(requestId, fileId, pageIndex, renderWidth)` | renders a page packet |
 | `setReviewCompleteB(fileId, payloadJson)` | sets independent whole-file inspection completion |
+| `setRepairAcceptanceB(fileId, payloadJson)` | accepts/revokes repairs for the actively viewed PDF hash |
 | `setFileStatusB(fileId, status)` | legacy classification API, retained for compatibility |
 | `setLastPageB(fileId, pageIndex)` | saves the last position |
 | `toggleProblemPageB(fileId, pageIndex)` | adds or removes a problem page |
@@ -38,6 +39,16 @@ verified. It returns the updated public file entry and never opens/switches PDFs
 For the active PDF, the frontend supplies its hash as well. Completion changes
 preserve legacy classification and issue data. Open-document and file-list data
 both include `review_complete`. CSV appends `review_complete` and `review_completed_at`.
+
+`setRepairAcceptanceB` requires `{accepted: boolean, expected_sha256: string,
+expected_identity: string}` and the active document/folder context. It rechecks the
+actual PDF hash and identity, requires completed inspection and no retained
+open/fixed marks for acceptance, and uses the revision-checked manifest writer.
+It returns the public file entry with `repairs_accepted` and `repair_accepted_at`.
+The optional schema-2 receipt and append-only acceptance/revocation history are
+described in [the repair contract](region-review.md#version-bound-acceptance-of-repairs).
+These computed fields also accompany issue replies, so adding a retained mark
+immediately removes the green indicator without modifying the historical receipt.
 
 `addIssueB` accepts `page_index`, `bbox`, `kind`, optional `note`, and
 `expected_sha256` from `openDocumentB`. `updateIssueB` accepts `expected_sha256`

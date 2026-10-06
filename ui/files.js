@@ -68,7 +68,25 @@ function renderFileList() {
       button.append(summary);
     }
     button.addEventListener("click", () => openDocumentF(file.file_id));
-    row.append(ok, button);
+    const acceptance = document.createElement("button");
+    acceptance.type = "button";
+    acceptance.className = "file-acceptance";
+    acceptance.textContent = "✓";
+    acceptance.classList.toggle("accepted", Boolean(file.repairs_accepted));
+    acceptance.classList.toggle("pending", Boolean(file.review_complete && !file.repairs_accepted));
+    const canAccept = file.file_id === state.activeFileId && state.document
+      && file.review_complete && !(counts.open || counts.fixed);
+    acceptance.disabled = state.reviewBusy || state.navigating || !canAccept;
+    acceptance.title = file.repairs_accepted
+      ? "Opravy přijaty pro tuto verzi PDF — kliknutím zrušíte přijetí"
+      : !file.review_complete ? "Nejdříve dokončete prohlídku pomocí OK"
+      : counts.open || counts.fixed ? "Nejdříve odstraňte vyhovující připomínky křížkem ×"
+      : file.file_id !== state.activeFileId ? "Otevřete PDF pro kontrolu a přijetí oprav"
+      : "Opravy ke kontrole — kliknutím přijmete aktuální verzi PDF";
+    acceptance.setAttribute("aria-label", `${acceptance.title}: ${file.name}`);
+    acceptance.setAttribute("aria-pressed", String(Boolean(file.repairs_accepted)));
+    acceptance.addEventListener("click", () => setRepairAcceptanceF(!file.repairs_accepted, file.file_id));
+    row.append(ok, acceptance, button);
     elements.fileListId.append(row);
   }
 

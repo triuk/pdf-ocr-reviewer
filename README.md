@@ -90,6 +90,12 @@ legacy `status` or annotations. Older `ok` files start checked; `error`,
 that initial mapping. Legacy classification stays in the manifest and CSV.
 The old 0–3 classification shortcuts and automatic status advancement are retired.
 
+The small **✓** beside OK accepts repairs for the currently opened PDF: orange
+means awaiting acceptance, green means accepted. Finish inspection and remove
+satisfactory retained marks with × first. Clicking green revokes acceptance.
+The manifest automatically records the PDF hash, time and decision history;
+changed PDF bytes need new acceptance. No hash entry or chat confirmation is needed.
+
 ## Targeted OCR repairs
 
 Press **M** (or **Označovat**) to mark words with a click or regions with a drag.

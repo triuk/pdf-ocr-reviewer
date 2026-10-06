@@ -166,3 +166,26 @@ default to unchecked. A stored explicit boolean always takes precedence.
 `ui.review_filter` stores `all`, `unreviewed` or `reviewed`. Legacy `status_filter`
 and `auto_advance` remain preserved but are not used by the simplified interface.
 CSV keeps its original columns and appends completion and its timestamp.
+
+## Version-bound acceptance of repairs
+
+The compact **✓** button beside **OK** is separate from inspection completion.
+Orange means the current PDF has not been accepted; green means it has. Its tooltip
+explains the action. Open the PDF, finish inspection with OK and remove satisfactory
+retained open/fixed marks with × before accepting. Clicking green revokes acceptance.
+Neither action changes issues, notes or OK. No hash needs to be entered or sent in chat.
+
+Acceptance is saved by the official manifest writer as optional schema-2
+`file.repair_acceptance = {ocr_sha256, accepted_at}` with a timezone-aware timestamp.
+`repair_acceptance_history` appends `{action: accepted|revoked, ocr_sha256, at}`.
+Absent fields in older manifests mean no acceptance. Unknown fields are preserved.
+The UI derives `repairs_accepted` from the receipt, current observed PDF hash,
+unchanged file identity, completed inspection and absence of retained open/fixed marks.
+On PDF replacement, the old receipt/history remain evidence for the old bytes;
+they cannot accept a different hash. External writers must preserve them, never
+create human acceptance. The backend rechecks actual bytes and document/folder
+context on click, and rejects stale PDFs or manifest revisions without overwriting
+newer work. CSV appends acceptance, time and the receipt hash.
+
+This records a human decision about the current PDF; archive acceptance still
+requires the external workflow's remaining quality and manifest checks.

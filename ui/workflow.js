@@ -28,6 +28,28 @@ async function toggleProblemPageF(pageIndex, button) {
   }
 }
 
+async function setRepairAcceptanceF(accepted, fileId = state.activeFileId) {
+  const file = state.files.find(item => item.file_id === fileId);
+  if (!file || !state.document || fileId !== state.activeFileId || state.navigating || state.reviewBusy) return;
+  const context = captureContext();
+  const payload = { accepted, expected_identity: state.document.identity_token,
+    expected_sha256: state.document.ocr_sha256 };
+  state.reviewBusy = true;
+  renderFileList();
+  try {
+    if (!await flushIssueDraft() || !await flushFileNote()) return;
+    if (!contextMatches(context)) return;
+    const data = await callBackend("setRepairAcceptanceB", fileId, JSON.stringify(payload));
+    Object.assign(file, data);
+    if (contextMatches(context)) {
+      state.document.repairs_accepted = data.repairs_accepted;
+      state.document.repair_accepted_at = data.repair_accepted_at;
+    }
+    setSaveState(accepted ? "Přijetí oprav uloženo" : "Přijetí oprav zrušeno", false);
+  } catch (error) { showToast(error.message, true); }
+  finally { state.reviewBusy = false; renderFileList(); }
+}
+
 function getCurrentPageIndex() {
   const rows = [...elements.pagesId.querySelectorAll(".page-row")];
   if (!rows.length) return 0;

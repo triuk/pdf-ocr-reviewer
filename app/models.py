@@ -17,6 +17,17 @@ VALID_OCR_MODES: Final[frozenset[str]] = frozenset(
 )
 
 
+def repair_acceptance_state(entry: dict[str, Any], changed: bool = False) -> dict[str, Any]:
+    receipt = entry.get("repair_acceptance")
+    counts = issue_counts(entry.get("issues", []))
+    accepted = bool(receipt and not changed
+                    and receipt["ocr_sha256"] == entry.get("ocr_sha256")
+                    and entry.get("review_complete", entry.get("status") == "ok")
+                    and not (counts["open"] or counts["fixed"]))
+    return {"repairs_accepted": accepted,
+            "repair_accepted_at": receipt["accepted_at"] if accepted else None}
+
+
 @dataclass(frozen=True, slots=True)
 class FileIdentity:
     size: int
@@ -54,6 +65,7 @@ class ScannedPdf:
             "problem_page_count": len(problem_pages) if isinstance(problem_pages, list) else 0,
             "changed_since_review": changed,
             "issue_counts": issue_counts(entry.get("issues", [])),
+            **repair_acceptance_state(entry, changed),
         }
 
 
