@@ -14,6 +14,15 @@ def payload(document, accepted=True):
             'expected_identity': document['identity_token']}
 
 
+def overwrite_pdf(path, text):
+    replacement = path.with_name('replacement.pdf')
+    create_pdf(replacement, text)
+    # MuPDF saves by removing the destination, which Windows forbids while open.
+    # Write through the existing file, as an external writer changing its bytes.
+    path.write_bytes(replacement.read_bytes())
+    replacement.unlink()
+
+
 def test_acceptance_is_separate_persisted_revocable_and_bound_to_changed_bytes(tmp_path):
     path = tmp_path/'one.pdf'
     create_pdf(path, 'Before repair')
@@ -39,7 +48,7 @@ def test_acceptance_is_separate_persisted_revocable_and_bound_to_changed_bytes(t
         assert not load_manifest(tmp_path)['files']['one.pdf']['repair_acceptance']
         api.set_repair_acceptance('one.pdf', payload(doc))
         historical = copy.deepcopy(load_manifest(tmp_path)['files']['one.pdf']['repair_acceptance_history'])
-        create_pdf(path, 'After repair, different PDF')
+        overwrite_pdf(path, 'After repair, different PDF')
         with pytest.raises(ValueError, match='PDF se změnilo'):
             api.set_repair_acceptance('one.pdf', payload(doc))
         api.open_folder(tmp_path)
@@ -98,7 +107,7 @@ def test_acceptance_rejects_replacement_even_with_same_stat_identity(tmp_path):
     api = BackendApi(tmp_path)
     try:
         doc = api.open_document('one.pdf');stat = path.stat()
-        create_pdf(path, 'Sample B')
+        overwrite_pdf(path, 'Sample B')
         assert path.stat().st_size == stat.st_size
         os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
         with pytest.raises(ValueError, match='PDF se změnilo'):
