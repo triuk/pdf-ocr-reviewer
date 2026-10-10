@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--folder",
         type=Path,
-        help="Open this folder when the application starts.",
+        help="Open this folder instead of the executable's folder (or the source folder).",
     )
     parser.add_argument(
         "--self-test",

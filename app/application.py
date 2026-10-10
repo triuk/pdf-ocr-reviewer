@@ -13,6 +13,13 @@ def get_ui_folder() -> Path:
     return Path(__file__).resolve().parent.parent / "ui"
 
 
+def get_default_folder() -> Path:
+    """Use the executable's directory, outside PyInstaller's temporary bundle."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
+
+
 @contextmanager
 def external_program_environment() -> Iterator[None]:
     """Temporarily restore the system library path before WebUI launches a browser."""
@@ -42,8 +49,8 @@ def external_program_environment() -> Iterator[None]:
 
 class PdfOcrReviewerApplication:
     def __init__(self, initial_folder: Path | None = None):
-        self.initial_folder = initial_folder
-        self.api = BackendApi(initial_folder=initial_folder)
+        self.initial_folder = initial_folder if initial_folder is not None else get_default_folder()
+        self.api = BackendApi(initial_folder=self.initial_folder)
         self.window: Any | None = None
 
     def run(self) -> None:

@@ -84,7 +84,7 @@ locations. Stale locations are flagged for fresh marking. Manifest replacement
 uses an expected revision checked under the cooperative writer lock described
 below. External writers must use the same helper to participate in that protection.
 
-## External passes (instructions version 3)
+## External passes (instructions version 5)
 
 `repair_instructions.workflow.eligible_statuses` is `["open", "fixed"]`;
 `excluded_statuses` is `["dismissed", "verified"]`. The short prompt can remain:
@@ -100,9 +100,31 @@ an earlier result, include it as `previous_result` in that new history record.
 On failure set `open`, append `repair_blocked`, and retain prior results/history.
 Concurrent deletion or changed notes must be reconciled before committing results.
 
-Migration replaces exact built-in v1/v2 rules, including the old “only open” rule,
+Migration replaces exact built-in v1/v2/v3/v4 rules, including the old “only open” rule,
 and preserves custom rules and unknown fields. It leaves issue states and history
-unchanged. The schema remains version 2; the instructions are version 3.
+unchanged. The schema remains version 2; the instructions are version 5.
+
+## Working with user notes
+
+`note_handling` explains the user request carried by a mark. Read `issues[].note`
+together with `kind`, the page and `bbox`; a specific note can request more than
+the type alone. `files[].note` supplies shared context for that PDF, but does not
+create extra repair requests. `problem_pages` are navigation flags. The quoted
+`text` and `targets[].text` are document snapshots, not instructions or replacement
+text supplied by the user.
+
+An empty note does not cancel a mark. Use the type and location when the intended
+change is clear; otherwise record the specific missing information. Conflicting
+notes or ambiguous targets remain `open` with a `repair_blocked` history entry and
+a request for clarification. Partial completion also remains `open`, with a record
+of what was done and what remains. Overlapping marks are considered together, but
+each keeps its own ID, result and history.
+
+Keep user notes verbatim. Describe the response in `result.summary` and
+`history.summary`, rather than replacing the note with a tool-written explanation.
+Before committing, reread changed notes and reassess the request. Never silently
+restore marks that the user deleted while a pass was running. Human acceptance
+receipts/history are preserved; external tools cannot create them for the user.
 
 ## Cooperative writer protocol
 

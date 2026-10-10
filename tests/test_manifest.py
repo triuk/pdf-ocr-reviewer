@@ -78,13 +78,14 @@ def test_v1_migration_preserves_all_review_data_and_unknown_fields(tmp_path: Pat
     assert load_manifest(tmp_path) == migrated
 
 
-@pytest.mark.parametrize("version", [1, 2])
+@pytest.mark.parametrize("version", [1, 2, 3])
 def test_old_repair_contract_migrates_without_requeueing_accepted_issues(tmp_path, version):
     import copy
     from app.manifest import migrate_manifest
     from app.review import repair_instructions
     data = default_manifest()
-    legacy = json.loads((Path(__file__).parent / 'fixtures/repair-instructions-v2.json').read_text(encoding="utf-8"))
+    fixture_version = 3 if version == 3 else 2
+    legacy = json.loads((Path(__file__).parent / f'fixtures/repair-instructions-v{fixture_version}.json').read_text(encoding="utf-8"))
     legacy['version'] = version
     if version == 1:
         legacy.pop('writer_protocol')
@@ -98,12 +99,69 @@ def test_old_repair_contract_migrates_without_requeueing_accepted_issues(tmp_pat
     original = copy.deepcopy(data)
     migrated = migrate_manifest(data)
     instructions = migrated['repair_instructions']
-    assert instructions['version'] == 3
+    assert instructions['version'] == 5
     assert instructions['rules'] == repair_instructions()['rules'] + ['My additional rule']
     assert instructions['workflow']['eligible_statuses'] == ['open', 'fixed']
     assert instructions['workflow']['excluded_statuses'] == ['dismissed', 'verified']
+    assert instructions['workflow']['scope'] == 'targeted_repairs_of_existing_output'
+    assert instructions['note_handling'] == repair_instructions()['note_handling']
     assert instructions['custom'] == {'preserve': True}
     assert instructions['statuses']['custom'] == 'Keep this too'
+    assert migrated['files'] == original['files']
+    assert data == original
+    assert migrate_manifest(migrated) == migrated
+
+
+def test_note_contract_migration_preserves_custom_rules_and_notes(tmp_path):
+    import copy
+    from app.manifest import migrate_manifest
+    from app.review import repair_instructions
+
+    data = default_manifest()
+    legacy = json.loads((Path(__file__).parent / 'fixtures/repair-instructions-v3.json').read_text(encoding='utf-8'))
+    legacy['rules'][2] = 'Keep our custom handling of this note.'
+    legacy['rules'].append('Keep our additional check.')
+    legacy['workflow']['executor'] = 'custom-external-tool'
+    data['repair_instructions'] = legacy
+    data['files']['one.pdf'] = {'note': 'Keep this note.', 'custom': {'keep': True}}
+    original = copy.deepcopy(data)
+    migrated = migrate_manifest(data)
+    instructions = migrated['repair_instructions']
+
+    assert instructions['rules'][2] == legacy['rules'][2]
+    assert instructions['rules'][-1] == 'Keep our additional check.'
+    assert instructions['note_handling'] == repair_instructions()['note_handling']
+    assert instructions['workflow']['executor'] == 'custom-external-tool'
+    assert migrated['files'] == original['files']
+    assert data == original
+    save_manifest(tmp_path, migrated, expected_revision=None)
+    assert load_manifest(tmp_path) == migrated
+
+
+def test_v4_migration_removes_retired_defaults_without_losing_custom_data(monkeypatch):
+    import copy
+    import hashlib
+    from app import review
+    from app.manifest import migrate_manifest
+
+    retired_rule = 'Retired built-in instruction.'
+    retired_digest = hashlib.sha256(retired_rule.encode('utf-8')).hexdigest()
+    monkeypatch.setattr(review, '_RETIRED_RULE_HASHES', review._RETIRED_RULE_HASHES | {retired_digest})
+    data = default_manifest()
+    instructions = data['repair_instructions']
+    instructions['version'] = 4
+    instructions.pop('note_handling')
+    instructions['project_policy'] = {'obsolete': True}
+    instructions['rules'].extend([retired_rule, 'My custom instruction.'])
+    data['files']['one.pdf'] = {'note': 'User request.', 'custom': True}
+    original = copy.deepcopy(data)
+
+    migrated = migrate_manifest(data)
+    assert migrated['repair_instructions']['version'] == 5
+    assert 'project_policy' not in migrated['repair_instructions']
+    assert retired_rule not in migrated['repair_instructions']['rules']
+    assert migrated['repair_instructions']['rules'][-1] == 'My custom instruction.'
+    assert migrated['repair_instructions']['note_handling'] == review.repair_instructions()['note_handling']
     assert migrated['files'] == original['files']
     assert data == original
     assert migrate_manifest(migrated) == migrated

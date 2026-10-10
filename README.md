@@ -36,6 +36,9 @@ chmod +x pdf-ocr-reviewer-linux-x86_64
 ./pdf-ocr-reviewer-linux-x86_64
 ```
 
+On startup, the binary automatically loads PDFs from its own directory, even when
+launched from another working directory. Use `--folder /path/to/pdfs` to override it.
+
 Before launching the system browser, the Linux one-file build temporarily restores the original `LD_LIBRARY_PATH` saved by PyInstaller in `LD_LIBRARY_PATH_ORIG`. This prevents the system Firefox/Chromium process from loading incompatible shared libraries from the one-file bundle's temporary directory. After the browser starts, the application restores its own PyInstaller environment.
 
 When a `v*` tag is created, for example `v0.1.0`, the same workflow automatically creates a GitHub Release after successful tests and builds. The release contains both one-file binaries and `SHA256SUMS.txt`.
@@ -56,7 +59,7 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-Optionally open a folder at startup:
+Source runs automatically load the folder containing `main.py`. To open another folder:
 
 ```bash
 python main.py --folder "/path/to/pdf-folder"
@@ -131,7 +134,11 @@ repair contract, so a tool with access to the folder can receive this short prom
 > Podle `pdf-ocr-reviewer.manifest.json` oprav otevřené připomínky u PDF od `XXX.pdf` po `YYY.pdf` včetně.
 
 The reviewer does not run OCR or modify PDFs itself. The manifest is the control
-file for the external tool. Each requested pass includes all retained `open` and
+file for the external tool. Instructions version 5 describe how to interpret each
+mark's note together with its type, location and the file note. Quoted document text
+is kept separate from the user's request. Empty notes do not cancel marks; unclear
+or conflicting requests stay open with a concrete explanation. Results respond to
+the user's note without rewriting it. Each requested pass includes all retained `open` and
 `fixed` marks within the inclusive filename range, once per pass. After an external repair,
 click **Obnovit** to reread both the manifest and the PDF. External writers use the shared revision-checked writer described in the
 manifest instructions; a changed revision is rejected under the writer lock. Unsaved notes are journaled locally and can be recovered after restart;
