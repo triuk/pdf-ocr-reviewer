@@ -78,6 +78,26 @@ def test_external_program_environment_restores_pyinstaller_library_path(monkeypa
     assert os.environ["LD_LIBRARY_PATH_ORIG"] == "/system/custom"
 
 
+def test_main_pdf_option_selects_requested_file(monkeypatch, tmp_path):
+    import main
+
+    path = tmp_path / "chosen.pdf"
+    with pymupdf.open() as doc:
+        doc.new_page()
+        doc.save(path)
+    monkeypatch.setattr(application.sys, "argv", ["reviewer", "--pdf", str(path)])
+    observed = []
+    def run(app):
+        try:
+            observed.append(app.api.public_state()["ui"]["last_file"])
+            assert app.api.current_folder == tmp_path
+        finally:
+            app.api.close()
+    monkeypatch.setattr(application.PdfOcrReviewerApplication, "run", run)
+    assert main.main() == 0
+    assert observed == ["chosen.pdf"]
+
+
 def test_external_program_environment_removes_library_path_without_original(monkeypatch) -> None:
     monkeypatch.setattr(application.sys, "platform", "linux")
     monkeypatch.setattr(application.sys, "frozen", True, raising=False)

@@ -20,6 +20,7 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Open this folder instead of the executable's folder (or the source folder).",
     )
+    parser.add_argument("--pdf", type=Path, help="Open this PDF immediately, with the manifest in its parent folder.")
     parser.add_argument(
         "--self-test",
         action="store_true",
@@ -141,7 +142,17 @@ def main() -> int:
     if args.self_test:
         return run_self_test()
 
-    app = PdfOcrReviewerApplication(initial_folder=args.folder)
+    if args.pdf:
+        pdf_path = args.pdf.expanduser().resolve()
+        if not pdf_path.is_file() or pdf_path.suffix.casefold() != ".pdf":
+            _report("--pdf must name an existing PDF.")
+            return 2
+        if args.folder and args.folder.expanduser().resolve() != pdf_path.parent:
+            _report("--folder must be the parent folder of --pdf.")
+            return 2
+        app = PdfOcrReviewerApplication(initial_folder=pdf_path.parent, initial_pdf=pdf_path.name)
+    else:
+        app = PdfOcrReviewerApplication(initial_folder=args.folder)
     app.run()
     return 0
 
