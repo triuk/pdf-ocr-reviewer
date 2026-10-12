@@ -55,7 +55,7 @@ def default_manifest() -> dict[str, Any]:
             "review_filter": "all",
             "name_filter": "",
             "auto_advance": True,
-            "issue_kind": "position",
+            "issue_kind": "geometry",
             "issue_filter": "all",
         },
         "files": {},
@@ -90,14 +90,6 @@ def migrate_manifest(data: Any) -> Any:
             for entry in files.values():
                 if isinstance(entry, dict):
                     entry.setdefault("issues", [])
-    # Keep the stored kind key compatible; broaden only the old built-in wording.
-    if isinstance(data, dict):
-        instructions = data.get("repair_instructions")
-        kinds = instructions.get("kinds") if isinstance(instructions, dict) else None
-        if isinstance(kinds, dict) and kinds.get("oversized") == "Příliš velký box":
-            data = copy.deepcopy(data)
-            data["repair_instructions"]["kinds"]["oversized"] = "Špatná velikost boxu"
-            data["repair_instructions"].setdefault("kind_notes", repair_instructions()["kind_notes"])
     if isinstance(data, dict) and isinstance(data.get("repair_instructions"), dict):
         instructions = data["repair_instructions"]
         migrated = migrate_repair_instructions(instructions)
@@ -119,7 +111,7 @@ def validate_ui_options(ui: dict[str, Any]) -> None:
     nullable_string = lambda value: value is None or isinstance(value, str)
     field(ui.get("zoom_percent", 100), lambda n: type(n) is int and 25 <= n <= 400, "ui.zoom_percent")
     field(ui.get("ocr_mode", "pdf_order"), lambda v: choice(v, VALID_OCR_MODES), "ui.ocr_mode")
-    field(ui.get("issue_kind", "position"), lambda v: choice(v, ISSUE_KINDS), "ui.issue_kind")
+    field(ui.get("issue_kind", "geometry"), lambda v: choice(v, ISSUE_KINDS), "ui.issue_kind")
     field(ui.get("status_filter", "all"), lambda v: choice(v, {*VALID_FILE_STATUSES, "all"}), "ui.status_filter")
     field(ui.get("review_filter", "all"), lambda v: choice(v, {"all", "unreviewed", "reviewed"}), "ui.review_filter")
     field(ui.get("issue_filter", "all"), lambda v: choice(v, {"all", "active", "open", "fixed"}), "ui.issue_filter")

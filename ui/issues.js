@@ -1,6 +1,6 @@
 "use strict";
 
-const issueKindLabels = { position: "Špatná poloha", oversized: "Špatná velikost boxu", text: "Chybný text", missing: "Chybějící text", other: "Jiný problém" };
+const issueKindLabels = { geometry: "Špatná poloha / velikost", text: "Chybný text", missing: "Chybějící text", other: "Jiný problém" };
 const issueStatusLabels = { open: "K opravě", fixed: "Po opravě", verified: "Dříve potvrzeno", dismissed: "Smazáno" };
 const issueSymbols = { open: "!", fixed: "◉", verified: "✓", dismissed: "×" };
 

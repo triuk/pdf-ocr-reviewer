@@ -20,7 +20,7 @@ def review(tmp_path):
     api = BackendApi(tmp_path)
     opened = api.open_document(pdf.name)
     api.manifest['custom'] = {'preserved': [1, {'value': 2}]}
-    payload = {'page_index': 0, 'bbox': [20, 20, 100, 60], 'kind': 'position',
+    payload = {'page_index': 0, 'bbox': [20, 20, 100, 60], 'kind': 'geometry',
                'expected_sha256': opened['ocr_sha256']}
     first = api.add_issue(pdf.name, payload)['issue_id']
     second = api.add_issue(pdf.name, payload)['issue_id']

@@ -151,8 +151,10 @@ def main():
             click(".file-item .file-ok input")
             wait_for("!state.reviewBusy && !state.document.review_complete")
             click("#markIssueId")
-            js("elements.issueKindId.value='oversized';elements.issueKindId.dispatchEvent(new Event('change')); ")
-            assert js("return elements.issueKindId.selectedOptions[0].textContent;") == "Špatná velikost boxu"
+            js("elements.issueKindId.value='geometry';elements.issueKindId.dispatchEvent(new Event('change')); ")
+            assert js("return elements.issueKindId.selectedOptions[0].textContent;") == "Špatná poloha / velikost"
+            assert js("return [...elements.issueKindId.options].map(o=>o.value)") == ["geometry", "text", "missing", "other"]
+            assert js("return [...elements.selectedIssueKindId.options].map(o=>o.value)") == ["geometry", "text", "missing", "other"]
             point = js("const o=state.pageData.get(0).header.ocr; const w=o.layout_items[0]; const p=document.querySelector('.scan-pane').getBoundingClientRect(); return [p.left+(w.x0+w.x1)/2/o.page_width*p.width,p.top+(w.y0+w.y1)/2/o.page_height*p.height];")
             # Real Ctrl+wheel zooms only the image and keeps its PDF point under the cursor.
             js("window.zoomLayout=()=>({width:innerWidth,dpr:devicePixelRatio,rects:[...document.querySelectorAll('.toolbar,.sidebar,.ocr-pane')].map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height];})});window.beforeZoom=zoomLayout();")
@@ -163,7 +165,7 @@ def main():
             assert max(abs(a-b) for a,b in zip(point, after_point)) < 1
             pointer(*point)
             wait_for("state.document?.issues.length === 1")
-            assert js("return state.document.issues[0].kind;") == "oversized"
+            assert js("return state.document.issues[0].kind;") == "geometry"
             assert js("const o=state.pageData.get(0).header.ocr,w=o.layout_items[0],b=state.document.issues[0].bbox;return [w.x0,w.y0,w.x1,w.y1].every((v,i)=>Math.abs(v-b[i])<0.02);")
             first_id = js("return state.selectedIssueId;")
             js("elements.issueNoteId.value='Text je správně; zmenšit box.'; elements.issueNoteId.dispatchEvent(new Event('input',{bubbles:true}));")
@@ -246,7 +248,7 @@ def main():
             assert (folder / MANIFEST_FILENAME).read_bytes() == external_bytes, "UI overwrote external repair"
             click("#refreshFolderId")
             wait_for("state.document?.issue_counts.fixed === 2 && state.pageData.has(0)")
-            assert js("return state.issueKind;") == "oversized"
+            assert js("return state.issueKind;") == "geometry"
             # Whole-file completion is independent of retained issues and reversible.
             assert js("return elements.refreshFolderId.textContent;") == "Obnovit"
             assert not js("return Boolean(document.querySelector('.status-button'));")
@@ -325,7 +327,7 @@ def main():
             builder = BackendApi(folder)
             opened = builder.open_document(second.name)
             box = load_manifest(folder)["files"][pdf.name]["issues"][0]["bbox"]
-            response = builder.add_issue(second.name, {"page_index": 0, "bbox": box, "kind": "position", "expected_sha256": opened["ocr_sha256"]})
+            response = builder.add_issue(second.name, {"page_index": 0, "bbox": box, "kind": "geometry", "expected_sha256": opened["ocr_sha256"]})
             second_issue = response["issue_id"]
             builder.close()
             batch = load_manifest(folder)

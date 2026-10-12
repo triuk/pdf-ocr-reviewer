@@ -95,7 +95,7 @@ def test_completion_is_independent_of_legacy_status_and_issues(tmp_path):
         opened = api.open_document('one.pdf')
         sha = opened['ocr_sha256']
         api.set_file_status('one.pdf', 'error')
-        api.add_issue('one.pdf', {'page_index': 0, 'bbox': [30, 30, 70, 70], 'kind': 'position', 'expected_sha256': sha})
+        api.add_issue('one.pdf', {'page_index': 0, 'bbox': [30, 30, 70, 70], 'kind': 'geometry', 'expected_sha256': sha})
         before = copy.deepcopy(api.manifest['files']['one.pdf'])
         api.set_review_complete('one.pdf', {'complete': True, 'expected_sha256': sha})
         api.open_folder(tmp_path)

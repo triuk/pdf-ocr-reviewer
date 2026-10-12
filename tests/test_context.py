@@ -65,7 +65,7 @@ def test_invalid_fixed_target_cannot_be_confirmed(tmp_path, field, value):
     api = BackendApi(tmp_path)
     opened = api.open_document('a.pdf')
     sha = opened['ocr_sha256']
-    issue_id = api.add_issue('a.pdf', {'page_index':0, 'bbox':[20,20,60,60], 'kind':'position', 'expected_sha256':sha})['issue_id']
+    issue_id = api.add_issue('a.pdf', {'page_index':0, 'bbox':[20,20,60,60], 'kind':'geometry', 'expected_sha256':sha})['issue_id']
     issue = api.manifest['files']['a.pdf']['issues'][0]
     issue.update({field:value, 'status':'fixed', 'result':{'summary':'test','before_sha256':sha,'after_sha256':sha,'at':'2026-09-29T12:00:00+02:00'}})
     assert api._issue_state('a.pdf')['issues'][0]['invalid_target']

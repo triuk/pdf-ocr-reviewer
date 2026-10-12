@@ -43,7 +43,7 @@ def main():
             api.set_file_note(file_id, 'Zkušební kopie pro test ovládání. Barevné stavy jsou ukázkové; OCR zde nebylo opravováno.')
             with PdfDocument(args.destination / file_id) as doc:
                 words = doc.render_page(0, 600).ocr['layout_items']
-            for n, kind in enumerate(('position', 'oversized', 'text')):
+            for n, kind in enumerate(('geometry', 'text', 'other')):
                 word = words[min(n * 12, len(words) - 1)] if words else None
                 bbox = [word[k] for k in ('x0','y0','x1','y1')] if word else [30, 30 + n*50, 180, 65 + n*50]
                 api.add_issue(file_id, {'page_index':0,'bbox':bbox,'kind':kind,'expected_sha256':opened['ocr_sha256'],

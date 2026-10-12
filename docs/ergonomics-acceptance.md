@@ -23,7 +23,7 @@ ovládání; nejsou dokladem provedené opravy OCR. Původní PDF se nemění.
 
 ## Co vyzkoušet
 
-1. **Označení:** M zapne označování. Vyberte „Špatná velikost boxu“, klikněte
+1. **Označení:** M zapne označování. Vyberte „Špatná poloha / velikost“, klikněte
    na slovo nebo tažením označte oblast. Poznámka se ukládá automaticky,
    typ další připomínky zůstává zapamatovaný.
 2. **Po externí opravě:** použijte „Obnovit“. V ukázce jsou některá místa

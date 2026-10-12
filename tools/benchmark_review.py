@@ -81,7 +81,7 @@ def main():
         try:
             opened = api.open_document(pdf.name)
             api.add_issue(pdf.name, {'page_index': 0, 'bbox': [10, 10, 20, 20],
-                                    'kind': 'position', 'expected_sha256': opened['ocr_sha256']})
+                                    'kind': 'geometry', 'expected_sha256': opened['ocr_sha256']})
             template = api.manifest['files'][pdf.name]['issues'][0]
             history = [{'action': 'edited', 'at': '2026-10-03T12:00:00+02:00',
                         'previous': {'note': 'Prior review note ' + str(i)},

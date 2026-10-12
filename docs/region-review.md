@@ -47,8 +47,12 @@ The following is illustrative; real hashes are computed from the PDF bytes.
 `source_sha256` is immutable provenance, whereas `target_sha256` binds the current
 region/targets to a PDF version. `text` and `targets` are OCR snapshots, not user
 instructions. A repair must include `result` before setting status to `fixed`.
-The historical key `oversized` now means **Špatná velikost boxu**, including both
-oversized and undersized boxes. Existing marks keep their keys and histories.
+`geometry` means **Špatná poloha / velikost**: incorrect position, incorrect size,
+or both together. The external worker checks both properties against the scan,
+corrects all identified geometry errors and records the diagnosis and changes in
+`result.summary`. Size includes boxes that are too large or too small. The former
+`position` and `oversized` kinds are unsupported; no aliases or automatic conversion
+are provided.
 
 ```json
 {
@@ -61,7 +65,7 @@ oversized and undersized boxes. Existing marks keep their keys and histories.
   "coordinate_system": "displayed_page_points_top_left",
   "text": "Nadpis",
   "targets": [{"x0": 40, "y0": 60, "x1": 150, "y1": 85, "text": "Nadpis", "block": 0, "line": 0, "word": 0}],
-  "kind": "oversized",
+  "kind": "geometry",
   "note": "Text je správně, zmenšit box.",
   "status": "open",
   "source_sha256": "<64 lowercase hexadecimal characters>",
@@ -84,7 +88,7 @@ locations. Stale locations are flagged for fresh marking. Manifest replacement
 uses an expected revision checked under the cooperative writer lock described
 below. External writers must use the same helper to participate in that protection.
 
-## External passes (instructions version 5)
+## External passes (instructions version 7)
 
 `repair_instructions.workflow.eligible_statuses` is `["open", "fixed"]`;
 `excluded_statuses` is `["dismissed", "verified"]`. The short prompt can remain:
@@ -102,7 +106,7 @@ Concurrent deletion or changed notes must be reconciled before committing result
 
 Migration replaces exact built-in v1/v2/v3/v4 rules, including the old “only open” rule,
 and preserves custom rules and unknown fields. It leaves issue states and history
-unchanged. The schema remains version 2; the instructions are version 5.
+unchanged. The schema remains version 2; the instructions are version 7.
 
 ## Working with user notes
 

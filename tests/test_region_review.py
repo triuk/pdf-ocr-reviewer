@@ -28,7 +28,7 @@ def reviewed(tmp_path):
     with PdfDocument(path) as doc:
         word = doc.render_page(0, 600).ocr["layout_items"][0]
     payload = {"page_index": 0, "bbox": [word[k] for k in ("x0", "y0", "x1", "y1")],
-               "kind": "oversized", "expected_sha256": opened["ocr_sha256"]}
+               "kind": "geometry", "expected_sha256": opened["ocr_sha256"]}
     try:
         yield api, path, payload
     finally:
@@ -52,6 +52,7 @@ def test_annotation_round_trip_and_companions(reviewed):
     response = api.add_issue(path.name, payload)
     issue = response["issues"][0]
     assert issue["text"] == "First"
+    assert issue["kind"] == "geometry"
     assert len(issue["targets"]) == 1
     assert issue["source_sha256"] == file_sha256(path)
     assert issue["target_sha256"] == issue["source_sha256"]
@@ -65,6 +66,20 @@ def test_annotation_round_trip_and_companions(reviewed):
     saved = load_manifest(path.parent)
     assert saved["files"][path.name]["resources"] == {"qa2": "sample-qa2.md", "qa3": "sample-qa3.md"}
     assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize("kind", ["position", "oversized"])
+def test_removed_geometry_kinds_are_rejected_for_updates_and_saved_marks(reviewed, kind):
+    api, path, payload = reviewed
+    issue_id = api.add_issue(path.name, payload)["issue_id"]
+    original = copy.deepcopy(api.manifest)
+    with pytest.raises(ValueError, match="Unsupported issue kind"):
+        api.update_issue(path.name, issue_id, {"kind": kind, "expected_sha256": payload["expected_sha256"]})
+    assert api.manifest == original
+    candidate = load_manifest(path.parent)
+    candidate["files"][path.name]["issues"][0]["kind"] = kind
+    with pytest.raises(ManifestFormatError, match="Unsupported issue kind"):
+        save_manifest(path.parent, candidate, expected_revision=manifest_revision(path.parent))
 
 
 def test_confirm_reopen_preserve_repair_history_and_pdf(reviewed):
@@ -142,7 +157,8 @@ def test_stale_page_request_does_not_switch_active_review_document(reviewed):
     {"bbox": [0, 0, 0, 1]}, {"bbox": [-1, 0, 5, 5]}, {"bbox": [0, 0, 301, 5]},
     {"bbox": [0, 0, float("nan"), 1]}, {"bbox": "wrong"},
     {"page_index": 1}, {"page_index": -1}, {"page_index": True},
-    {"kind": "unknown"}, {"note": 99}, {"expected_sha256": "0" * 64},
+    {"kind": "unknown"}, {"kind": "position"}, {"kind": "oversized"},
+    {"note": 99}, {"expected_sha256": "0" * 64},
 ])
 def test_bad_region_requests_do_not_mutate_manifest(reviewed, patch):
     api, path, payload = reviewed

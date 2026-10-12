@@ -10,7 +10,7 @@ není potřeba nový export ani změna OCR. Reviewer PDF sám nepřepisuje.
 - `files[<název PDF>].issues[]` se `origin="ocr_placeholder"`, `kind="text"`.
 - `replacement_text`: původní text zadaný člověkem — chybějící část **nebo celé
   výsledné slovo či údaj včetně interpunkce**. Zachovat jej v manifestu beze změny.
-  Instrukce verze 6 výslovně dovolují při zapracování odstranit z jeho začátku
+  Instrukce verze 7 výslovně dovolují při zapracování odstranit z jeho začátku
   a konce přesný překryv s bezpečně přečtenými částmi téhož slova nebo údaje
   bezprostředně před značkou a za ní. Okolí tak bude ve výsledku právě jednou.
   Kvůli jednoznačnému překryvu se znovu neptat uživatele. Překryv ověřit podle

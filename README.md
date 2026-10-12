@@ -62,7 +62,7 @@ Open a particular OCR PDF directly:
 Literal `[NEČITELNÉ]` markers are imported automatically, including markers inside
 words or followed by punctuation. The first unanswered place opens with a focused
 **Správné znění** field and its surrounding text. Enter the missing substring or the
-complete resulting word/value, including punctuation. Instructions version 6 authorize
+complete resulting word/value, including punctuation. Instructions version 7 authorize
 the external worker to remove exact overlaps with the immediately surrounding parts
 of that word/value, keeping the supplied text unchanged in the manifest.
 The field autosaves; **Ctrl + Enter** or **Uložit / přeskočit a další** moves to the next
@@ -146,7 +146,11 @@ requests until deleted. Symbols and labels accompany the colors.
 
 Deleted marks remain recoverable in **Archiv → Obnovit označení**. Older confirmed
 marks are also archived and excluded from repairs. Restoring a mark never changes
-PDF bytes. **Špatná velikost boxu** covers boxes that are too large or too small.
+PDF bytes. **Špatná poloha / velikost** covers a misplaced box, a box that is too
+large or too small, or both problems together. The external worker checks position
+and size against the scan, determines which are wrong, and describes the changes
+in the repair result. New marks use `kind=geometry`; the old `position` and
+`oversized` kinds are no longer supported or converted automatically.
 
 Everything is saved in `pdf-ocr-reviewer.manifest.json`. Older manifests and built-in instructions
 are migrated on save, preserving marks, history and custom extensions. The first member, `repair_instructions`, describes the complete
@@ -155,7 +159,7 @@ repair contract, so a tool with access to the folder can receive this short prom
 > Podle `pdf-ocr-reviewer.manifest.json` oprav otevřené připomínky u PDF od `XXX.pdf` po `YYY.pdf` včetně.
 
 The reviewer does not run OCR or modify PDFs itself. The manifest is the control
-file for the external tool. Instructions version 6 describe how to interpret each
+file for the external tool. Instructions version 7 describe how to interpret each
 mark's note together with its type, location and the file note. Quoted document text
 is kept separate from the user's request. Empty notes do not cancel marks; unclear
 or conflicting requests stay open with a concrete explanation. Results respond to

@@ -21,6 +21,15 @@ def test_missing_manifest_returns_defaults(tmp_path: Path) -> None:
     assert manifest["files"] == {}
     assert manifest["ui"]["ocr_mode"] == "pdf_order"
     assert manifest["ui"]["overlay"] is True
+    assert manifest["ui"]["issue_kind"] == "geometry"
+
+
+@pytest.mark.parametrize("kind", ["position", "oversized"])
+def test_removed_geometry_preferences_are_rejected(tmp_path, kind):
+    manifest = default_manifest()
+    manifest["ui"]["issue_kind"] = kind
+    with pytest.raises(ManifestFormatError, match="ui.issue_kind"):
+        save_manifest(tmp_path, manifest, expected_revision=None)
 
 
 def test_manifest_round_trip_preserves_unknown_fields(tmp_path: Path) -> None:
@@ -99,7 +108,7 @@ def test_old_repair_contract_migrates_without_requeueing_accepted_issues(tmp_pat
     original = copy.deepcopy(data)
     migrated = migrate_manifest(data)
     instructions = migrated['repair_instructions']
-    assert instructions['version'] == 6
+    assert instructions['version'] == 7
     assert instructions['rules'] == repair_instructions()['rules'] + ['My additional rule']
     assert instructions['workflow']['eligible_statuses'] == ['open', 'fixed']
     assert instructions['workflow']['excluded_statuses'] == ['dismissed', 'verified']
@@ -157,7 +166,7 @@ def test_v4_migration_removes_retired_defaults_without_losing_custom_data(monkey
     original = copy.deepcopy(data)
 
     migrated = migrate_manifest(data)
-    assert migrated['repair_instructions']['version'] == 6
+    assert migrated['repair_instructions']['version'] == 7
     assert 'project_policy' not in migrated['repair_instructions']
     assert retired_rule not in migrated['repair_instructions']['rules']
     assert migrated['repair_instructions']['rules'][-1] == 'My custom instruction.'

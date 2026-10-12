@@ -93,7 +93,7 @@ def test_retained_marks_block_acceptance_and_never_change_status(tmp_path):
         doc = api.open_document('one.pdf')
         api.set_review_complete('one.pdf', {'complete': True, 'expected_sha256': doc['ocr_sha256']})
         api.add_issue('one.pdf', {'page_index': 0, 'bbox': [30,30,70,70],
-                                'kind': 'position', 'expected_sha256': doc['ocr_sha256']})
+                                'kind': 'geometry', 'expected_sha256': doc['ocr_sha256']})
         with pytest.raises(ValueError, match='×'):
             api.set_repair_acceptance('one.pdf', payload(doc))
         assert api.manifest['files']['one.pdf']['issues'][0]['status'] == 'open'

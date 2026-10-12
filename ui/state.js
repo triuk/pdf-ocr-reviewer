@@ -15,7 +15,7 @@ const state = {
     review_filter: "all",
     name_filter: "",
     auto_advance: true,
-    issue_kind: "position",
+    issue_kind: "geometry",
     issue_filter: "all",
   },
   activeFileId: null,
@@ -42,7 +42,7 @@ const state = {
   fileNoteDraft: null,
   fileNoteQueue: Promise.resolve(),
   marking: false,
-  issueKind: "position",
+  issueKind: "geometry",
   selectedIssueId: null,
   issueFilter: "active",
   issueDrafts: new Map(),
@@ -169,7 +169,7 @@ function applyPublicState(data) {
     elements.nameFilterId.value = state.ui.name_filter || "";
     elements.statusFilterId.value = state.ui.review_filter || "all";
     elements.fileIssueFilterId.value = state.ui.issue_filter || "all";
-    state.issueKind = state.ui.issue_kind || "position";
+    state.issueKind = state.ui.issue_kind || "geometry";
     elements.issueKindId.value = state.issueKind;
     renderFileList();
     absorbDrafts(data);

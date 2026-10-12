@@ -115,7 +115,7 @@ def test_exported_overlap_contract_preserves_user_text_and_extensions(tmp_path, 
         api.open_document(path.name)  # Normal reviewer update persists the migrated policy.
         exported = json.loads((tmp_path / MANIFEST_FILENAME).read_text(encoding="utf-8"))
         policy = exported["repair_instructions"]["note_handling"]["placeholder"]
-        assert exported["repair_instructions"]["version"] == 6
+        assert exported["repair_instructions"]["version"] == 7
         assert policy == repair_instructions()["note_handling"]["placeholder"]
         assert f"{original} | {supplied} | {effective} | {result}" in policy
         assert "kvůli jednoznačnému překryvu nevyžaduj další potvrzení" in policy
@@ -124,7 +124,7 @@ def test_exported_overlap_contract_preserves_user_text_and_extensions(tmp_path, 
         assert "v result.summary a historii" in policy
         assert exported["files"] == expected_files
         assert exported["custom"] == candidate["custom"]
-        expected_instructions["version"] = 6
+        expected_instructions["version"] = 7
         expected_instructions["note_handling"]["placeholder"] = policy
         assert exported["repair_instructions"] == expected_instructions
         assert exported["files"][path.name]["issues"][0]["replacement_text"] == supplied
