@@ -182,9 +182,12 @@ za hotovou funkci bez ověření.
 Etapy 1–3 tvoří první celek oprav potvrzených chyb. Etapy 4–6 přidávají
 odsouhlasená vylepšení. Etapa 7 je společná podmínka vydání.
 
-Nejbližší konkrétní krok: nechat workflow ověřit release commit a publikovat
-v0.1.5; poté ověřit dostupnost obou binárek a jejich kontrolní součty.
-Změny jsou rozděleny do samostatných commitů.
+Aktualizace 2026-10-13: vydání do v0.1.7 jsou publikovaná. Připravené v0.1.8
+slučuje polohu a velikost do `geometry` bez kompatibility starých typů a zahrnuje
+dosavadní doplnění značek `[NEČITELNÉ]` a otevření PDF pomocí `--pdf`.
+Lokálně prošlo 118 Python testů, 30 JS testů, self-test a tři prohlížečové scénáře.
+Nejbližší konkrétní krok: push logických commitů, ověření release workflow pro
+v0.1.8 a dostupnosti obou binárek s kontrolními součty.
 
 Výchozí ověření z code review 2026-09-28: 42 úspěšných Python testů,
 aplikační self-test a prohlížečový smoke test na dočasné kopii dodaného PDF.

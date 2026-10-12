@@ -9,8 +9,9 @@ The [post-review work plan](review-work-plan.md) (2026-09-29) covers integrity
 fixes, reliable navigation, recovery, ergonomics and measured performance
 improvements. Stages 1–5 passed ergonomics acceptance on 2026-10-03. Stage 6 is
 complete; see [measured performance](performance.md). Stage 7 passed remote CI
-on Linux and Windows. The v0.1.5 release is prepared; publication is gated on
-the final release commit passing the same checks.
+on Linux and Windows; releases through v0.1.7 are published. The v0.1.8 extension
+combines box geometry issues and adds unreadable-marker transcription and `--pdf`.
+Publication is gated on the final release commit passing the same checks.
 
 ## 8. Loading, virtualization, and memory
 
@@ -381,10 +382,11 @@ After each completed unit of work, this README must be updated:
 ### Current work status
 
 ```text
-Phase: ergonomics accepted; review stages 1–6 complete; stage 7 checks passed; v0.1.5 release prepared
-Completed: schema-2 instructions and migration; word/region marks; OCR snapshots and SHA-256 anchors; QA companion references; issue notes, history, filters, counts and colors; delete/restore marks; retained red and blue marks feed external passes; revision-checked locked writes; backup/draft recovery; image-only zoom; measured autosave/render optimizations
-Verified: 83 Python tests, 23 JS scenarios, source and packaged self-tests on Linux and Windows; real WebUI/Chrome checks on ordinary and cropped/rotated synthetic PDFs on Linux; user ergonomics acceptance; repeatable performance benchmark
-Next action: publish v0.1.5 after the release commit passes CI, then verify both downloadable binaries and checksums
+Phase: v0.1.8 prepared; combined box geometry and unreadable-marker transcription complete
+Completed: review stages 1–7; version-7 repair instructions; geometry is the single position/size type; automatic unreadable-marker import; replacement text autosave and recovery; direct --pdf opening
+Verified: 118 Python tests, 30 JS scenarios, source self-test and three real WebUI/Chromium checks on Linux: ordinary PDF, cropped/rotated PDF, 13 unreadable markers on a temporary copy of a real OCR PDF (including narrow layout)
+Next action: push the logical commits and publish v0.1.8 after Linux/Windows CI, then verify both downloadable binaries and checksums
+Breaking change: position and oversized issue kinds and saved type preferences are unsupported; no aliases or automatic conversion
 Known limitation: no OCR repair engine inside the reviewer; repairs are performed by the separately instructed external tool
 Known limitation: external writers must use the shared revision-checked writer; direct unrelated writes cannot be locked cooperatively
 Known limitation: stale regions must be marked again; no automatic relocation across changed PDFs
@@ -395,6 +397,8 @@ Known limitation: Windows manual ergonomics and performance on arbitrary long re
 
 | Date | Decision | Reason |
 |---|---|---|
+| 2026-10-13 | Use one geometry kind for wrong box position, size or both; require diagnosis against the scan; remove position/oversized without compatibility aliases | User wants to avoid switching between the two frequent issues and explicitly rejected backward compatibility |
+| 2026-10-13 | Import unreadable markers and collect replacement text separately from notes; open a selected PDF via --pdf | Include the previously pending changes in logical commits and v0.1.8; reviewer still delegates actual PDF repair |
 | 2026-10-03 | Prepare v0.1.5 after successful Linux and Windows CI; publish maintained release notes and binary checksums | User approved push and release after CI; final release commit repeats all checks before publication |
 | 2026-10-03 | Complete measured autosave/render optimizations and add real-browser CI with cropped/rotated pages | User accepted ergonomics; retain full hash verification, recovery and writer locks |
 | 2026-09-30 | Zoom only the scan with Ctrl + wheel, pan with the middle button, reset with F/percentage; remove redundant document heading | Keep OCR and controls fixed, preserve PDF marking coordinates and focus selected marks in the magnified image |
@@ -422,6 +426,7 @@ Known limitation: Windows manual ergonomics and performance on arbitrary long re
 
 | Date | Work performed | Result |
 |---|---|---|
+| 2026-10-13 | Split direct-PDF opening, unreadable-marker transcription and combined geometry into separate commits; prepare v0.1.8 | 118 Python tests, 30 JS tests, source self-test and all three Linux browser checks pass; release pipeline verifies Linux and Windows binaries before publication |
 | 2026-10-03 | Completed measured performance improvements, real-browser CI and Windows UTF-8 fixture fixes; prepared v0.1.5 | [CI passed](https://github.com/triuk/pdf-ocr-reviewer/actions/runs/37112115852): 83 Python tests and 23 JS scenarios on both platforms, ordinary and cropped/rotated browser checks on Linux, source and packaged self-tests on Linux and Windows |
 | 2026-09-29 | Simplified ergonomics after user feedback: external passes process retained open/fixed marks; × deletes; Archiv restores; built-in instructions migrate to v3 | 68 Python tests, 12 JS scenarios, real Chromium external-pass/delete/restore/recovery flow and source/packaged self-tests passed on Linux; refreshed test binary, user demo data preserved |
 | 2026-09-29 | Implemented review stages 1–5 in separate commits and prepared the ergonomics trial | 66 Python tests, 11 JS scenarios and real Chromium recovery/multi-PDF flow passed on Linux; Windows execution and user acceptance remain pending |
