@@ -8,8 +8,22 @@ function selectedIssue() {
   return state.document?.issues?.find((issue) => issue.id === state.selectedIssueId);
 }
 
+function isPlaceholder(issue) { return issue?.origin === "ocr_placeholder"; }
+function needsTranscription(issue) {
+  return isPlaceholder(issue) && issue.status === "open" && !issue.stale && !issue.invalid_target
+    && !(issue.replacement_text || "").trim();
+}
+function issueLabel(issue) {
+  if (isPlaceholder(issue) && issue.status === "open") {
+    return issue.replacement_text?.trim() ? "Znění zadáno · čeká na zapracování" : "Nečitelné · doplnit znění";
+  }
+  return issueStatusLabels[issue.status];
+}
+
 function filteredIssues() {
   return (state.document?.issues || []).filter((issue) => {
+    if (state.issueFilter === "unreadable") return needsTranscription(issue);
+    if (state.issueFilter === "transcribed") return isPlaceholder(issue) && issue.status === "open" && Boolean(issue.replacement_text?.trim());
     if (state.issueFilter === "all") return true;
     if (state.issueFilter === "archived") return ["dismissed", "verified"].includes(issue.status);
     if (state.issueFilter === "active") return ["open", "fixed"].includes(issue.status);
@@ -32,6 +46,9 @@ function renderIssueSidebar() {
   elements.nextIssueId.disabled = !issues.length;
   elements.markIssueId.disabled = !state.document;
   elements.issueKindId.disabled = !state.document;
+  const remaining = (state.document?.issues || []).filter(needsTranscription).length;
+  elements.nextUnreadableId.disabled = !remaining;
+  elements.nextUnreadableId.textContent = `Doplnit nečitelné · ${remaining}`;
   for (const issue of issues) {
     const button = document.createElement("button");
     button.type = "button";
@@ -39,9 +56,11 @@ function renderIssueSidebar() {
     button.classList.toggle("selected", issue.id === state.selectedIssueId);
     button.setAttribute("aria-pressed", String(issue.id === state.selectedIssueId));
     const heading = document.createElement("strong");
-    heading.textContent = `${issueSymbols[issue.status]} ${issueStatusLabels[issue.status]} · str. ${issue.page_index + 1}`;
+    heading.textContent = `${issueSymbols[issue.status]} ${issueLabel(issue)} · str. ${issue.page_index + 1}`;
     const detail = document.createElement("span");
-    detail.textContent = `${issueKindLabels[issue.kind]}${issue.text ? ` · ${issue.text}` : ""}`;
+    detail.textContent = isPlaceholder(issue)
+      ? `${issue.context_before}${issue.marker}${issue.context_after}${issue.replacement_text?.trim() ? ` · Zadáno: ${issue.replacement_text}` : ""}`
+      : `${issueKindLabels[issue.kind]}${issue.text ? ` · ${issue.text}` : ""}`;
     button.title = `${heading.textContent}\n${detail.textContent}\n${issue.note}${(issue.stale || issue.invalid_target) ? "\nJiná verze PDF — nutné nové označení" : ""}`;
     if ((issue.stale || issue.invalid_target)) heading.textContent += " · jiná verze";
     button.append(heading, detail);
@@ -62,8 +81,13 @@ function renderIssueEditor() {
   document.querySelector(".note-panel").classList.toggle("has-issue", Boolean(issue));
   if (!issue) return;
   elements.selectedIssueTitleId.className = `issue-${issue.status}`;
-  elements.selectedIssueTitleId.textContent = `${issueSymbols[issue.status]} ${issueStatusLabels[issue.status]} · strana ${issue.page_index + 1}`;
+  elements.selectedIssueTitleId.textContent = `${issueSymbols[issue.status]} ${issueLabel(issue)} · strana ${issue.page_index + 1}`;
   const draft = state.issueDrafts.get(draftKey(state.activeFileId, issue.id));
+  elements.transcriptionEditorId.hidden = !isPlaceholder(issue);
+  elements.replacementTextId.value = draft?.replacement_text ?? issue.replacement_text ?? "";
+  elements.replacementTextId.disabled = Boolean(issue.stale || issue.invalid_target || ["dismissed", "verified"].includes(issue.status));
+  elements.placeholderContextId.textContent = `${issue.context_before || ""}${issue.marker || ""}${issue.context_after || ""}`;
+  elements.selectedIssueKindId.disabled = isPlaceholder(issue);
   elements.selectedIssueKindId.value = draft?.kind || issue.kind;
   elements.issueNoteId.value = draft?.note ?? issue.note;
   elements.issueSaveId.textContent = draft ? "Neuložené změny" : "Uloženo";
@@ -97,6 +121,7 @@ function renderPageIssues(pageIndex) {
     layer.className = "issue-annotations";
     for (const issue of state.document?.issues || []) {
       if (issue.page_index !== pageIndex || !["open", "fixed"].includes(issue.status)) continue;
+      if (isPlaceholder(issue) && !state.ui.overlay) continue;
       const box = document.createElement("div");
       box.className = `issue-box issue-${issue.status}`;
       box.dataset.issueId = issue.id;
@@ -104,7 +129,7 @@ function renderPageIssues(pageIndex) {
       box.classList.toggle("stale", (issue.stale || issue.invalid_target));
       // A stale region remains in its old relative position and is explicitly flagged.
       positionIssueRect(box, issue.bbox, issue.page_width, issue.page_height);
-      box.title = `${issueStatusLabels[issue.status]} · ${issueKindLabels[issue.kind]}${issue.note ? `\n${issue.note}` : ""}${(issue.stale || issue.invalid_target) ? "\nJiná verze PDF" : ""}`;
+      box.title = `${issueLabel(issue)} · ${issueKindLabels[issue.kind]}${issue.note ? `\n${issue.note}` : ""}${(issue.stale || issue.invalid_target) ? "\nJiná verze PDF" : ""}`;
       const controls = document.createElement("div");
       controls.className = "issue-box-controls";
       // Keep both controls accessible even on small boxes against a page edge.
@@ -113,7 +138,7 @@ function renderPageIssues(pageIndex) {
       const badge = document.createElement("button");
       badge.type = "button";
       badge.className = "issue-badge";
-      badge.textContent = issueSymbols[issue.status];
+      badge.textContent = isPlaceholder(issue) && issue.status === "open" ? "?" : issueSymbols[issue.status];
       badge.setAttribute("aria-label", `${box.title}, strana ${pageIndex + 1}`);
       const dismiss = document.createElement("button");
       dismiss.type = "button";
@@ -171,6 +196,19 @@ async function selectIssue(issueId, scroll = true) {
         - container.getBoundingClientRect().top + center * rect.height - container.clientHeight / 2), behavior: "smooth" });
     }
   }
+  if (isPlaceholder(issue) && !elements.replacementTextId.disabled) elements.replacementTextId.focus({ preventScroll: true });
+}
+
+async function nextUnreadable() {
+  const context = captureContext();
+  if (!await flushIssueDraft() || !contextMatches(context)) return;
+  const issues = (state.document?.issues || []).filter(needsTranscription)
+    .sort((a, b) => a.page_index - b.page_index || a.bbox[1] - b.bbox[1] || a.bbox[0] - b.bbox[0]);
+  if (!issues.length) { showToast("Všechna aktuální nečitelná místa mají zadané znění. Čekají na zapracování do PDF."); return; }
+  const current = issues.findIndex(issue => issue.id === state.selectedIssueId);
+  state.issueFilter = "unreadable";
+  elements.issueFilterId.value = "unreadable";
+  await selectIssue(issues[(current + 1) % issues.length].id);
 }
 
 async function navigateIssue(direction) {
@@ -219,6 +257,10 @@ function scheduleIssueDraft() {
   const previous = state.issueDrafts.get(draftKey(state.activeFileId, issue.id));
   const draft = { folder: state.folder, token: crypto.randomUUID(), base_revision: state.document.manifest_revision, base_note: previous?.base_note ?? issue.note, base_kind: previous?.base_kind ?? issue.kind, recovered: Boolean(previous?.recovered), fileId: state.activeFileId, issueId: issue.id, expected_sha256: state.document.ocr_sha256,
     note: elements.issueNoteId.value, kind: elements.selectedIssueKindId.value };
+  if (isPlaceholder(issue) && !elements.replacementTextId.disabled) {
+    draft.replacement_text = elements.replacementTextId.value;
+    draft.base_replacement_text = previous?.base_replacement_text ?? issue.replacement_text;
+  }
   const key = draftKey(draft.fileId, draft.issueId);
   state.issueDrafts.set(key, draft);
   persistDraft(draft);
@@ -236,6 +278,7 @@ async function saveIssueDraft(key) {
       try {
         const data = await callBackend("updateIssueB", draft.fileId, draft.issueId, JSON.stringify({
           note: draft.note, kind: draft.kind, expected_sha256: draft.expected_sha256,
+          ...(typeof draft.replacement_text === "string" ? { replacement_text: draft.replacement_text } : {}),
         }));
         if (state.issueDrafts.get(key) === draft) state.issueDrafts.delete(key);
         forgetDraft(draft);
@@ -246,7 +289,7 @@ async function saveIssueDraft(key) {
           elements.retryIssueSaveId.hidden = !state.issueDrafts.has(key);
         }
       } catch (error) {
-        elements.issueSaveId.textContent = "Neuloženo — poznámka zůstává zde";
+        elements.issueSaveId.textContent = "Neuloženo — text zůstává zde";
         elements.retryIssueSaveId.hidden = false;
         showToast(error.message, true);
         return false;
@@ -380,6 +423,15 @@ function attachIssueEvents() {
   elements.issueFilterId.addEventListener("change", () => { state.issueFilter = elements.issueFilterId.value; renderIssueSidebar(); });
   elements.previousIssueId.addEventListener("click", () => navigateIssue(-1));
   elements.nextIssueId.addEventListener("click", () => navigateIssue(1));
+  elements.nextUnreadableId.addEventListener("click", nextUnreadable);
+  elements.nextTranscriptionId.addEventListener("click", nextUnreadable);
+  elements.replacementTextId.addEventListener("input", scheduleIssueDraft);
+  elements.replacementTextId.addEventListener("blur", flushIssueDraft);
+  elements.replacementTextId.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault(); nextUnreadable();
+    }
+  });
   elements.issueNoteId.addEventListener("input", scheduleIssueDraft);
   elements.issueNoteId.addEventListener("blur", flushIssueDraft);
   elements.selectedIssueKindId.addEventListener("change", () => {
@@ -406,7 +458,7 @@ function handleIssueKeyboard(event) {
   else if (key === "escape") setMarking(false);
   else if (key === "[" || key === "k") navigateIssue(-1);
   else if (key === "]" || key === "j") navigateIssue(1);
-  else if (key === "n" && selectedIssue()) elements.issueNoteId.focus();
+  else if (key === "n" && selectedIssue()) (isPlaceholder(selectedIssue()) ? elements.replacementTextId : elements.issueNoteId).focus();
   else if (key === "x" && ["open", "fixed"].includes(selectedIssue()?.status)) {
     if (!event.repeat) changeIssueStatus("dismissed");
   }

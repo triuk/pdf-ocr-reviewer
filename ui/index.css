@@ -293,6 +293,12 @@ input, select, textarea { background: var(--panel); color: var(--text); padding:
 .issue-editor-fields { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; }
 #issueNoteId { min-width: 0; width: 100%; resize: vertical; }
 .issue-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.transcription-editor { display: grid; gap: 4px; }
+.transcription-editor[hidden] { display: none; }
+.transcription-editor small { color: var(--muted); font-weight: normal; }
+.placeholder-context { max-height: 40px; overflow: auto; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.transcription-fields { display: flex; gap: 8px; align-items: center; }
+.transcription-fields textarea { flex: 1; min-width: 0; }
 .issue-result { font-size: 12px; color: var(--muted); max-height: 48px; overflow: auto; white-space: pre-wrap; }
 .issue-result:empty { display: none; }
 .issue-result.stale { color: var(--warning); }

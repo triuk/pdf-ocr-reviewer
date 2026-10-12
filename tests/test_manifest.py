@@ -99,7 +99,7 @@ def test_old_repair_contract_migrates_without_requeueing_accepted_issues(tmp_pat
     original = copy.deepcopy(data)
     migrated = migrate_manifest(data)
     instructions = migrated['repair_instructions']
-    assert instructions['version'] == 5
+    assert instructions['version'] == 6
     assert instructions['rules'] == repair_instructions()['rules'] + ['My additional rule']
     assert instructions['workflow']['eligible_statuses'] == ['open', 'fixed']
     assert instructions['workflow']['excluded_statuses'] == ['dismissed', 'verified']
@@ -157,7 +157,7 @@ def test_v4_migration_removes_retired_defaults_without_losing_custom_data(monkey
     original = copy.deepcopy(data)
 
     migrated = migrate_manifest(data)
-    assert migrated['repair_instructions']['version'] == 5
+    assert migrated['repair_instructions']['version'] == 6
     assert 'project_policy' not in migrated['repair_instructions']
     assert retired_rule not in migrated['repair_instructions']['rules']
     assert migrated['repair_instructions']['rules'][-1] == 'My custom instruction.'

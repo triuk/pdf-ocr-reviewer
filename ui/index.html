@@ -79,6 +79,8 @@
             <option value="active">Ponechané</option>
             <option value="fixed">Po opravě</option>
             <option value="open">K opravě</option>
+            <option value="unreadable">Nečitelné — bez znění</option>
+            <option value="transcribed">Znění k zapracování</option>
             <option value="archived">Archiv</option>
           </select>
         </div>
@@ -100,6 +102,7 @@
         </select>
         <button id="previousIssueId" class="secondary" type="button" title="K — předchozí připomínka">← K</button>
         <button id="nextIssueId" class="secondary" type="button" title="J — další připomínka">Další · J →</button>
+        <button id="nextUnreadableId" type="button" title="Přejít na další nečitelné místo bez zadaného znění">Doplnit nečitelné · 0</button>
         <span id="markHintId" class="mark-hint">M: označit slovo kliknutím nebo oblast tažením. Esc: čtení.</span>
       </div>
 
@@ -127,6 +130,16 @@
           <div class="issue-editor-heading"><strong id="selectedIssueTitleId"></strong>
             <span id="issueSaveId" role="status"></span>
             <button id="closeIssueId" type="button" class="secondary" title="Zavřít detail">×</button>
+          </div>
+          <div id="transcriptionEditorId" class="transcription-editor" hidden>
+            <div id="placeholderContextId" class="placeholder-context" aria-label="Okolní text"></div>
+            <label for="replacementTextId">Správné znění</label>
+            <small id="replacementHintId">Zadejte chybějící část nebo celé výsledné slovo/údaj. Již přítomné okolí se ve výsledku nebude opakovat.</small>
+            <div class="transcription-fields">
+              <textarea id="replacementTextId" rows="2" placeholder="Nevíte? Nechte prázdné — místo zůstane k řešení." aria-describedby="replacementHintId transcriptionHelpId"></textarea>
+              <button id="nextTranscriptionId" type="button" class="secondary">Uložit / přeskočit a další</button>
+            </div>
+            <small id="transcriptionHelpId">Ukládá se automaticky. Ctrl + Enter: další nečitelné. Znění do PDF zapracuje OCR worker.</small>
           </div>
           <div class="issue-editor-fields">
             <select id="selectedIssueKindId" aria-label="Typ vybrané připomínky"></select>

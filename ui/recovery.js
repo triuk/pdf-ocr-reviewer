@@ -40,7 +40,8 @@ function restoreDocumentDrafts() {
     const issue = record.issueId ? state.document.issues.find(i => i.id === record.issueId) : null;
     if (record.issueId && !issue) continue;
     const currentNote = issue ? issue.note : state.document.note;
-    if (currentNote === record.note && (!issue || issue.kind === record.kind)) {
+    if (currentNote === record.note && (!issue || (issue.kind === record.kind
+      && (typeof record.replacement_text !== "string" || issue.replacement_text === record.replacement_text)))) {
       forgetDraft(record); continue;
     }
     record.recovered = true; // Explicitly apply restored drafts; navigation can still proceed.
@@ -59,10 +60,12 @@ function renderDraftRecovery() {
     const row = document.createElement("div"); row.className = "recovery-row";
     const title = document.createElement("strong"); title.textContent = `${draft.fileId} · ${draft.issueId ? "poznámka k místu" : "poznámka souboru"}`;
     const text = document.createElement("textarea"); text.readOnly = true; text.rows = 2; text.value = draft.note; text.setAttribute("aria-label", "Obnovený text; lze zkopírovat");
+    if (typeof draft.replacement_text === "string") text.value = `Správné znění: ${draft.replacement_text}\nPoznámka: ${draft.note}`;
     const current = document.createElement("p");
     const same = state.activeFileId === draft.fileId;
     const issue = same && draft.issueId ? state.document?.issues.find(i => i.id === draft.issueId) : null;
     current.textContent = same ? `V manifestu: ${draft.issueId ? (issue ? issue.note : "Připomínka již neexistuje; koncept můžete zkopírovat.") : state.document?.note || "(prázdné)"}` : "Otevřete PDF pro porovnání s uloženou poznámkou.";
+    if (issue && typeof draft.replacement_text === "string") current.textContent += ` · Správné znění: ${issue.replacement_text || "(prázdné)"}`;
     if (same && draft.expected_sha256 !== state.document?.ocr_sha256) current.textContent = "PDF má jinou verzi. " + current.textContent;
     const apply = document.createElement("button"); apply.type = "button"; apply.textContent = same ? "Použít koncept" : "Otevřít PDF";
     apply.disabled = !state.files.some(f => f.file_id === draft.fileId) || (same && Boolean(draft.issueId) && !issue);
@@ -88,7 +91,7 @@ async function applyRecoveredDraft(draft) {
   if (draft.issueId && !issue) return;
   const replacement = {...draft, token: crypto.randomUUID(), recovered: false, durable: false,
     expected_sha256: state.document.ocr_sha256, base_note: issue ? issue.note : state.document.note,
-    base_kind: issue?.kind};
+    base_kind: issue?.kind, base_replacement_text: issue?.replacement_text};
   persistDraft(replacement);
   if (issue) {
     state.issueDrafts.set(draftKey(draft.fileId, draft.issueId), replacement);

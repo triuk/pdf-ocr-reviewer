@@ -14,6 +14,7 @@ from .review import COORDINATE_SYSTEM, validate_bbox
 # Bound native pixmap allocations even for extreme page aspect ratios.
 MAX_RENDER_PIXELS = 8_000_000
 MAX_RENDER_SIDE = 16_384
+UNREADABLE_MARKER = "[NEČITELNÉ]"
 
 
 class PdfDocumentError(RuntimeError):
@@ -144,3 +145,42 @@ class PdfDocument:
             "page_rotation": page.rotation, "coordinate_system": COORDINATE_SYSTEM,
             "targets": targets, "text": " ".join(item["text"] for item in targets),
         }
+
+    def unreadable_regions(self) -> list[dict[str, Any]]:
+        """Find literal markers across font spans, retaining only their character boxes.
+
+        OCR text is data. It is never interpreted as a repair instruction.
+        """
+        regions = []
+        for page_index in range(self.page_count):
+            page = self._document.load_page(page_index)
+            marker_index = 0
+            items = self._layout_items(page)
+            for block in page.get_text("rawdict", flags=pymupdf.TEXTFLAGS_RAWDICT & ~pymupdf.TEXT_PRESERVE_IMAGES)["blocks"]:
+                for line in block.get("lines", []):
+                    chars = [char for span in line["spans"] for char in span["chars"]]
+                    text = "".join(char["c"] for char in chars)
+                    start = 0
+                    while (offset := text.find(UNREADABLE_MARKER, start)) >= 0:
+                        end = offset + len(UNREADABLE_MARKER)
+                        rect = pymupdf.Rect(chars[offset]["bbox"])
+                        for char in chars[offset + 1:end]:
+                            rect |= pymupdf.Rect(char["bbox"])
+                        rect = (rect * page.rotation_matrix) & page.rect
+                        if not rect.is_empty:
+                            targets = [item for item in items if pymupdf.Rect(
+                                item["x0"], item["y0"], item["x1"], item["y1"]).intersects(rect)]
+                            regions.append({
+                                "page_index": page_index, "bbox": list(rect),
+                                "page_width": page.rect.width, "page_height": page.rect.height,
+                                "page_rotation": page.rotation, "coordinate_system": COORDINATE_SYSTEM,
+                                "targets": targets, "text": UNREADABLE_MARKER,
+                                "origin": "ocr_placeholder", "marker": UNREADABLE_MARKER,
+                                "marker_index": marker_index,
+                                "context_before": text[max(0, offset - 100):offset],
+                                "context_after": text[end:end + 100],
+                                "replacement_text": "",
+                            })
+                        marker_index += 1
+                        start = end
+        return regions

@@ -309,6 +309,32 @@ class BackendApi:
                 pages = self.active_document.page_metadata()
             assert self.active_document is not None
             entry = self._entry(file_id)
+            # Import once per PDF revision, including pages not yet rendered in the UI.
+            if entry.get("placeholder_scan_sha256") != self._document_sha256:
+                now = datetime.now().astimezone().isoformat(timespec="seconds")
+                known = [issue for issue in entry["issues"]
+                         if issue.get("origin") == "ocr_placeholder"
+                         and issue["target_sha256"] == self._document_sha256]
+                imported = []
+                known_ids = {issue["id"] for issue in entry["issues"]}
+                for region in self.active_document.unreadable_regions():
+                    issue_id = str(uuid.uuid5(uuid.NAMESPACE_URL,
+                        f"{file_id}:{self._document_sha256}:{region['page_index']}:{region['marker_index']}"))
+                    if issue_id in known_ids:
+                        continue
+                    if any(issue["page_index"] == region["page_index"]
+                           and all(abs(a - b) < 0.1 for a, b in zip(issue["bbox"], region["bbox"]))
+                           for issue in known):
+                        continue
+                    issue = {**region, "id": issue_id,
+                             "kind": "text", "note": "", "status": "open",
+                             "source_sha256": self._document_sha256, "target_sha256": self._document_sha256,
+                             "created_at": now, "updated_at": now,
+                             "history": [{"at": now, "action": "placeholder_detected", "to": "open"}]}
+                    validate_issue(issue)
+                    imported.append(issue)
+                entry["issues"] = [*entry["issues"], *imported]
+                entry["placeholder_scan_sha256"] = self._document_sha256
             assert self.manifest is not None
             previous_last_file = self.manifest["ui"].get("last_file")
             self.manifest["ui"]["last_file"] = file_id
@@ -417,7 +443,7 @@ class BackendApi:
 
     def update_issue(self, file_id: str, issue_id: str, patch: Any, *, compact: bool = False) -> dict[str, Any]:
         with self._lock:
-            if not isinstance(patch, dict) or set(patch) - {"status", "kind", "note", "expected_sha256"}:
+            if not isinstance(patch, dict) or set(patch) - {"status", "kind", "note", "replacement_text", "expected_sha256"}:
                 raise ValueError("Invalid issue update.")
             self._check_issue_document(file_id, patch.get("expected_sha256"))
             entry = self._entry(file_id)
@@ -426,6 +452,14 @@ class BackendApi:
                 raise ValueError("Připomínka neexistuje.")
             previous = entry["issues"][index]
             issue = copy.deepcopy(previous)
+            if "replacement_text" in patch:
+                if issue.get("origin") != "ocr_placeholder" or issue["target_sha256"] != self._document_sha256 or self._invalid_issue_target(issue):
+                    raise ValueError("Správné znění lze zadat pouze u značky v aktuální verzi PDF.")
+                if not isinstance(patch["replacement_text"], str):
+                    raise ValueError("Správné znění musí být text.")
+                if patch["replacement_text"] != issue.get("replacement_text", ""):
+                    patch = dict(patch)
+                    patch["status"] = "open"
             status = patch.get("status", issue["status"])
             if not isinstance(status, str):
                 raise ValueError("Invalid issue status.")

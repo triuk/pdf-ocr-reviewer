@@ -53,6 +53,27 @@ The self-test verifies the PyMuPDF and WebUI imports, the Tk/Tcl runtime, the bu
 
 ## Running from source
 
+Open a particular OCR PDF directly:
+
+```bash
+.venv/bin/python main.py --pdf /path/to/issue-ocr.pdf
+```
+
+Literal `[NEČITELNÉ]` markers are imported automatically, including markers inside
+words or followed by punctuation. The first unanswered place opens with a focused
+**Správné znění** field and its surrounding text. Enter the missing substring or the
+complete resulting word/value, including punctuation. Instructions version 6 authorize
+the external worker to remove exact overlaps with the immediately surrounding parts
+of that word/value, keeping the supplied text unchanged in the manifest.
+The field autosaves; **Ctrl + Enter** or **Uložit / přeskočit a další** moves to the next
+unanswered place. Empty fields remain open. Supplied text is listed separately under
+**Znění k zapracování** and still awaits the external OCR repair pass; entering text
+does not modify the PDF or mark a repair as performed. Notes remain separate.
+
+The schema-2 manifest now carries `origin=ocr_placeholder`, `marker`, `marker_index`,
+`context_before`, `context_after`, and `replacement_text` on imported issues.
+See the [Rychvald worker handoff](docs/rychvald-unreadable-handoff.md).
+
 ```bash
 python -m venv .venv
 python -m pip install -r requirements.txt
@@ -134,7 +155,7 @@ repair contract, so a tool with access to the folder can receive this short prom
 > Podle `pdf-ocr-reviewer.manifest.json` oprav otevřené připomínky u PDF od `XXX.pdf` po `YYY.pdf` včetně.
 
 The reviewer does not run OCR or modify PDFs itself. The manifest is the control
-file for the external tool. Instructions version 5 describe how to interpret each
+file for the external tool. Instructions version 6 describe how to interpret each
 mark's note together with its type, location and the file note. Quoted document text
 is kept separate from the user's request. Empty notes do not cancel marks; unclear
 or conflicting requests stay open with a concrete explanation. Results respond to

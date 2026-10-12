@@ -69,6 +69,7 @@ function bindElements() {
     "issueEditorId", "selectedIssueTitleId", "selectedIssueKindId", "issueNoteId",
     "issueResultId", "reopenIssueId", "closeIssueId",
     "issueSaveId", "retryIssueSaveId", "draftRecoveryId", "draftRecoveryListId", "draftRecoverySummaryId",
+    "nextUnreadableId", "transcriptionEditorId", "replacementTextId", "placeholderContextId", "nextTranscriptionId",
     "backupsId", "backupDialogId", "backupSelectId", "restoreBackupId", "closeBackupsId", "backupDescriptionId",
   ];
   for (const id of ids) elements[id] = document.getElementById(id);

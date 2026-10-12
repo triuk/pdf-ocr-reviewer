@@ -1,5 +1,11 @@
-function openDocumentF(fileId, afterReload = false) {
-  return enqueueNavigation(() => openDocumentNow(fileId, afterReload));
+async function openDocumentF(fileId, afterReload = false) {
+  const opened = await enqueueNavigation(() => openDocumentNow(fileId, afterReload));
+  // The workspace is inert until navigation finishes, so focus after it is enabled.
+  if (opened && state.activeFileId === fileId && !state.navigating && state.selectedIssueId
+      && isPlaceholder(selectedIssue()) && !elements.replacementTextId.disabled) {
+    elements.replacementTextId.focus({ preventScroll: true });
+  }
+  return opened;
 }
 
 async function openDocumentNow(fileId, afterReload = false) {
@@ -40,6 +46,7 @@ async function openDocumentNow(fileId, afterReload = false) {
 
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     if (generation === state.generation) scrollToSavedPage(documentData.last_page || 0);
+    if (generation === state.generation && documentData.issues.some(needsTranscription)) await nextUnreadable();
     return true;
   } catch (error) {
     showToast(error.message, true);
